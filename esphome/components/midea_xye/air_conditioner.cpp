@@ -43,6 +43,20 @@ void AirConditioner::setup() {
   //this->uart_->check_uart_settings(4800, 1, UART_CONFIG_PARITY_NONE, 8);
   this->last_on_mode_ = *this->supported_modes_.begin();
   UpdateNextCycle = 0;
+  ForceReadNextCycle = 1;
+
+  //Start up in Auto fan mode (since unit doesn't report it correctly)
+  this->fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
+
+  //Set interface to Celcius
+  setClientCommand(CLIENT_COMMAND_CELCIUS);
+  this->uart_->write_array(TXData, TX_LEN);
+  this->uart_->flush();
+  delay(this->response_timeout);
+  uint8_t data;
+  while (this->uart_->available())
+    this->uart_->read_byte(&data);
+
 }
 
 //TODO: Not sure if we really need this.
@@ -55,38 +69,38 @@ void AirConditioner::setPowerState(bool state) {
   UpdateNextCycle = 1;
 }
 
+void AirConditioner::setClientCommand(uint8_t command) {
+  TXData[0] =  PREAMBLE;
+  TXData[1] =  command;
+  TXData[2] =  SERVER_ID;
+  TXData[3] =  CLIENT_ID;
+  TXData[4] =  FROM_CLIENT;
+  TXData[5] =  CLIENT_ID;
+  TXData[6] =  0;
+  TXData[7] =  0;
+  TXData[8] =  0;
+  TXData[9] =  0;
+  TXData[10] =  0;
+  TXData[11] =  0;
+  TXData[12] =  0;
+  TXData[13] =  0xFF-TXData[1];
+  TXData[15] =  PROLOGUE;
+  TXData[14] = CalculateCRC(TXData, TX_LEN);
+}
 
 void AirConditioner::update() {
 
     if(0==UpdateNextCycle)
     {
       //construct query command
-      TXData[0] =  PREAMBLE;
-      TXData[1] =  CLIENT_COMMAND_QUERY;
-      TXData[2] =  SERVER_ID;
-      TXData[3] =  CLIENT_ID;
-      TXData[4] =  FROM_CLIENT;
-      TXData[5] =  CLIENT_ID;
-      TXData[6] =  0;
-      TXData[7] =  0;
-      TXData[8] =  0;
-      TXData[9] =  0;
-      TXData[10] =  0;
-      TXData[11] =  0;
-      TXData[12] =  0;
-      TXData[13] =  0xFF-TXData[1];
-      TXData[15] =  PROLOGUE;
-      TXData[14] = CalculateCRC(TXData, TX_LEN);
-      
+      setClientCommand(CLIENT_COMMAND_QUERY);
+
     }else
     {
       //construct set command
-      TXData[0] =  PREAMBLE;
-      TXData[1] =  CLIENT_COMMAND_SET;
-      TXData[2] =  SERVER_ID;
-      TXData[3] =  CLIENT_ID;
-      TXData[4] =  FROM_CLIENT;
-      TXData[5] =  CLIENT_ID;
+      setClientCommand(CLIENT_COMMAND_SET);
+
+
       //set mode
       switch(this->mode)
       {
@@ -122,10 +136,7 @@ void AirConditioner::update() {
       //TXData[9] =  CalculateSetTime(DesiredState.TimerStart);      
       //set timer stop
       //TXData[10] =  CalculateSetTime(DesiredState.TimerStop);
-      //unknown -> 0
-      //TXData[12] =  0;
-      TXData[13] =  0xFF-TXData[1];
-      TXData[15] =  PROLOGUE;
+      
       TXData[14] = CalculateCRC(TXData, TX_LEN);
       
       UpdateNextCycle=0;
@@ -217,6 +228,11 @@ void AirConditioner::ParseResponse()
     if( mode != ClimateMode::CLIMATE_MODE_OFF) //Don't update below states unless mode is an ON state
     {
       this->last_on_mode_ = mode;
+    }
+
+    if( mode != ClimateMode::CLIMATE_MODE_OFF || ForceReadNextCycle == 1) //Don't update below states unless mode is an ON state
+    {
+      
       update_property(this->target_temperature, (float)RXData[RX_BYTE_SET_TEMP], need_publish);
       //Don't update fan mode when we set it to auto
       //It seems the heatpump doesn't report back Auto mode - it reports back the current mode
@@ -250,6 +266,8 @@ void AirConditioner::ParseResponse()
   { 
     ESP_LOGE(Constants::TAG,"Received invalid response from AC");
   }
+
+  ForceReadNextCycle = 0;
 }
 
 uint8_t AirConditioner::CalculateSetTime(uint32_t time)

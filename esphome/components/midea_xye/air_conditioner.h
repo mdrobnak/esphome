@@ -21,6 +21,7 @@
 #define CLIENT_COMMAND_SET    0xC3
 #define CLIENT_COMMAND_LOCK   0xCC
 #define CLIENT_COMMAND_UNLOCK 0xCD
+#define CLIENT_COMMAND_CELCIUS 0xC4
 
 #define FROM_CLIENT           0x80
 
@@ -168,6 +169,7 @@ public:
   void set_humidity_setpoint_sensor(Sensor *sensor) { this->humidity_sensor_ = sensor; }
   void set_power_sensor(Sensor *sensor) { this->power_sensor_ = sensor; }
   void update() override;
+  void setClientCommand(uint8_t command);
   void setup() override;
   void loop() override {}
   void setPowerState(bool state);
@@ -195,6 +197,7 @@ public:
 
 private:
   uint8_t UpdateNextCycle;
+  uint8_t ForceReadNextCycle;
   uint32_t response_timeout;
 
 protected:
