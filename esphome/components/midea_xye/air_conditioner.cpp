@@ -49,9 +49,9 @@ void AirConditioner::setup() {
   this->fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
 
   //Set interface to Celcius
-  setClientCommand(CLIENT_COMMAND_CELCIUS);
-  this->uart_->write_array(TXData, TX_LEN);
-  this->uart_->flush();
+  //setClientCommand(CLIENT_COMMAND_CELCIUS);
+  //this->uart_->write_array(TXData, TX_LEN);
+  //this->uart_->flush();
   delay(this->response_timeout);
   uint8_t data;
   while (this->uart_->available())
@@ -145,8 +145,8 @@ void AirConditioner::update() {
 
     //TODO: Reimplement flow control for manual RS485 flow control chips 
     //digitalWrite(ComControlPin, RS485_TX_PIN_VALUE);
-    this->uart_->write_array(TXData, TX_LEN);
-    this->uart_->flush();
+    //this->uart_->write_array(TXData, TX_LEN);
+    //this->uart_->flush();
     delay(this->response_timeout);
     //digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
 
