@@ -52,10 +52,10 @@ void AirConditioner::setup() {
   //setClientCommand(CLIENT_COMMAND_CELCIUS);
   //this->uart_->write_array(TXData, TX_LEN);
   //this->uart_->flush();
-  delay(this->response_timeout);
-  uint8_t data;
-  while (this->uart_->available())
-    this->uart_->read_byte(&data);
+  //delay(this->response_timeout);
+  //uint8_t data;
+  //while (this->uart_->available())
+  //  this->uart_->read_byte(&data);
 
 }
 
@@ -147,22 +147,31 @@ void AirConditioner::update() {
     //digitalWrite(ComControlPin, RS485_TX_PIN_VALUE);
     //this->uart_->write_array(TXData, TX_LEN);
     //this->uart_->flush();
-    delay(this->response_timeout);
+    // delay(this->response_timeout);
     //digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
 
+     //delay(this->response_timeout);
+    //digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
+
+    bool frameStart = false;
+    uint8_t serialData = 0x00;
     uint8_t i = 0;
-    while (this->uart_->available())
-    {
-      if (i < RX_LEN)
-        this->uart_->read_byte(&RXData[i]);
-      i++;
+    while (this->uart_->available()) {
+        this->uart_->read_byte(&serialData);
+        if (serialData == PREAMBLE) {
+                frameStart = true;
+                RXData[i++] = serialData;
+        } else if (serialData == PROLOGUE) {
+                frameStart = false;
+                RXData[i] = serialData;
+		break;
+        } else if (frameStart) {
+                // Normal state
+                RXData[i++] = serialData;
+        }
     }
-    if (i == RX_LEN){
-      ParseResponse();
-    }
-    else {
-      ESP_LOGE(Constants::TAG,"Received incorrect message length from AC");
-    }
+    ParseResponse();
+
 }
 
 uint8_t AirConditioner::CalculateCRC(uint8_t* data, uint8_t len)
