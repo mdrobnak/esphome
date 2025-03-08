@@ -414,7 +414,30 @@ void AirConditioner::do_follow_me(float temperature, bool beeper) {
   IrFollowMeData data(static_cast<uint8_t>(lroundf(temperature)), beeper);
   this->transmitter_.transmit(data);
 #else
-  ESP_LOGW(Constants::TAG, "Action needs remote_transmitter component");
+  TXData[0] = PREAMBLE;
+  TXData[1] = 0xC6;
+  TXData[2] = SERVER_ID;
+  TXData[3] = CLIENT_ID;
+  TXData[4] = FROM_CLIENT;
+  TXData[5] = CLIENT_ID;
+  TXData[6] = 0;
+  TXData[7] = 0;
+  TXData[8] = 0;
+  TXData[9] = 0;
+  TXData[10] = 2;
+  TXData[11] = static_cast<uint8_t>(lroundf(temperature));
+  TXData[12] = 0;
+  TXData[13] = 0xFF - TXData[1];
+  TXData[15] = PROLOGUE;
+  TXData[14] = CalculateCRC(TXData, TX_LEN);
+  // Only send if mode is something other than off.
+  // Wired controller does not send 0xC6 when off.
+  if (this->mode != ClimateMode::CLIMATE_MODE_OFF) {
+    this->uart_->write_array(TXData, TX_LEN);
+    this->uart_->flush();
+    delay(this->response_timeout);
+  }
+
 #endif
 }
 
