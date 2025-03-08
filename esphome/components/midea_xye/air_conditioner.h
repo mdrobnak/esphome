@@ -200,6 +200,8 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   uint8_t UpdateNextCycle;
   uint8_t ForceReadNextCycle;
   uint32_t response_timeout;
+  bool followMeInit;
+  uint8_t lastFollowMeTemperature;
 
  protected:
   uart::UARTComponent *uart_;

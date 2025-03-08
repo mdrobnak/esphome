@@ -23,8 +23,10 @@ template<typename T> void update_property(T &property, const T &value, bool &fla
 }
 
 void AirConditioner::control(const ClimateCall &call) {
-  if (call.get_mode().has_value())
+  if (call.get_mode().has_value()) {
     this->mode = call.get_mode().value();
+    followMeInit = false;
+  }
   if (call.get_target_temperature().has_value())
     this->target_temperature = (int) call.get_target_temperature().value();
   if (call.get_fan_mode().has_value())
@@ -43,6 +45,7 @@ void AirConditioner::setup() {
   this->last_on_mode_ = *this->supported_modes_.begin();
   UpdateNextCycle = 0;
   ForceReadNextCycle = 1;
+  followMeInit = false;
 
   // Start up in Auto fan mode (since unit doesn't report it correctly)
   this->fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
@@ -175,6 +178,18 @@ void AirConditioner::update() {
     setACParams();
     cmdSent = CLIENT_COMMAND_SET;
     sendRecv(cmdSent);
+    // If the AC mode changed, follow-me should be
+    // refreshed, if emulating the wired controller's
+    // behavior.
+    if (!followMeInit) {
+      cmdSent = 0xC6;
+      prepareTXData(cmdSent);
+      TXData[10] = 6;
+      TXData[11] = lastFollowMeTemperature;
+      TXData[14] = CalculateCRC(TXData, TX_LEN);
+      sendRecv(cmdSent);
+      followMeInit = true;
+    }
   } else {
     // construct query command
     prepareTXData(CLIENT_COMMAND_QUERY);
@@ -425,7 +440,22 @@ void AirConditioner::do_follow_me(float temperature, bool beeper) {
   IrFollowMeData data(static_cast<uint8_t>(lroundf(temperature)), beeper);
   this->transmitter_.transmit(data);
 #else
-  ESP_LOGW(Constants::TAG, "Action needs remote_transmitter component");
+  prepareTXData(0xC6);
+  if (followMeInit) {
+    TXData[10] = 2;
+  } else {
+    TXData[10] = 6;
+    followMeInit = true;
+  }
+  lastFollowMeTemperature = static_cast<uint8_t>(lroundf(temperature));
+  TXData[11] = lastFollowMeTemperature;
+  TXData[14] = CalculateCRC(TXData, TX_LEN);
+  // Only send if mode is something other than off.
+  // Wired controller does not send 0xC6 when off.
+  if (this->mode != ClimateMode::CLIMATE_MODE_OFF) {
+    sendRecv(0xC6);
+    ESP_LOGI(Constants::TAG, "Sent Follow-Me data.");
+  }
 #endif
 }
 
