@@ -194,6 +194,7 @@ void AirConditioner::ParseResponse()
     (PREAMBLE==RXData[RX_BYTE_PREAMBLE])&&\
     (PROLOGUE==RXData[RX_BYTE_PROLOGUE])&&\
     (TO_CLIENT==RXData[RX_BYTE_TO_CLIENT])&&\
+    (CLIENT_COMMAND_QUERY==RXData[RX_BYTE_COMMAND_TYPE])&&\
     (RXData[RX_BYTE_CRC]==CalculateCRC(RXData, RX_LEN))\
   )
   {
