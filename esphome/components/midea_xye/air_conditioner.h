@@ -166,6 +166,9 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   void set_temperature_2b_sensor(Sensor *sensor) {
     this->temperature_2b_sensor_ = sensor;
   }
+  void set_temperature_3_sensor(Sensor *sensor) {
+    this->temperature_3_sensor_ = sensor;
+  }
   void set_current_sensor(Sensor *sensor) { this->current_sensor_ = sensor; }
   void set_timer_start_sensor(Sensor *sensor) {
     this->timer_start_sensor_ = sensor;
@@ -242,6 +245,7 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   Sensor *outdoor_sensor_{nullptr};
   Sensor *temperature_2a_sensor_{nullptr};
   Sensor *temperature_2b_sensor_{nullptr};
+  Sensor *temperature_3_sensor_{nullptr};
   Sensor *current_sensor_{nullptr};
   Sensor *timer_start_sensor_{nullptr};
   Sensor *timer_stop_sensor_{nullptr};
