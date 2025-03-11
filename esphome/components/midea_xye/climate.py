@@ -47,6 +47,7 @@ AUTO_LOAD = ["sensor"]
 CONF_OUTDOOR_TEMPERATURE = "outdoor_temperature"
 CONF_TEMPERATURE_2A = "temperature_2a"
 CONF_TEMPERATURE_2B = "temperature_2b"
+CONF_TEMPERATURE_3 = "temperature_3"
 CONF_CURRENT = "current"
 CONF_TIMER_START = "timer_start"
 CONF_TIMER_STOP = "timer_stop"
@@ -155,6 +156,13 @@ CONFIG_SCHEMA = cv.All(
                 state_class=STATE_CLASS_MEASUREMENT,
             ),
             cv.Optional(CONF_TEMPERATURE_2B): sensor.sensor_schema(
+                unit_of_measurement=UNIT_CELSIUS,
+                icon=ICON_THERMOMETER,
+                accuracy_decimals=1,
+                device_class=DEVICE_CLASS_TEMPERATURE,
+                state_class=STATE_CLASS_MEASUREMENT,
+            ),
+            cv.Optional(CONF_TEMPERATURE_3): sensor.sensor_schema(
                 unit_of_measurement=UNIT_CELSIUS,
                 icon=ICON_THERMOMETER,
                 accuracy_decimals=1,
@@ -353,6 +361,9 @@ async def to_code(config):
     if CONF_TEMPERATURE_2B in config:
         sens = await sensor.new_sensor(config[CONF_TEMPERATURE_2B])
         cg.add(var.set_temperature_2b_sensor(sens))
+    if CONF_TEMPERATURE_3 in config:
+        sens = await sensor.new_sensor(config[CONF_TEMPERATURE_3])
+        cg.add(var.set_temperature_3_sensor(sens))
     if CONF_CURRENT in config:
         sens = await sensor.new_sensor(config[CONF_CURRENT])
         cg.add(var.set_current_sensor(sens))

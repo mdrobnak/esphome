@@ -263,6 +263,7 @@ void AirConditioner::ParseResponse() {
     set_sensor(this->outdoor_sensor_, CalculateTemp(RXData[RX_C0_BYTE_T3_TEMP]));
     set_sensor(this->temperature_2a_sensor_, CalculateTemp(RXData[RX_C0_BYTE_T2A_TEMP]));
     set_sensor(this->temperature_2b_sensor_, CalculateTemp(RXData[RX_C0_BYTE_T2B_TEMP]));
+    set_sensor(this->temperature_3_sensor_, CalculateTemp(RXData[RX_C0_BYTE_T3_TEMP]));
     set_sensor(this->current_sensor_, RXData[RX_C0_BYTE_CURRENT]);
     set_sensor(this->timer_start_sensor_, CalculateGetTime(RXData[RX_C0_BYTE_TIMER_START]));
     set_sensor(this->timer_stop_sensor_, CalculateGetTime(RXData[RX_C0_BYTE_TIMER_STOP]));

@@ -64,8 +64,10 @@ climate:
     outdoor_temperature:        # Optional. Outdoor temperature sensor
       name: Outside Temp
     temperature_2a:             # Optional. Inside coil temperature
-      name: Inside Coil Temp
-    temperature_2b:             # Optional. Outside coil temperature
+      name: Inside Coil Inlet Temp
+    temperature_2b:             # Optional. Inside coil temperature
+      name: Inside Coil Outlet Temp
+    temperature_3:             # Optional. Outside coil temperature
       name: Outside Coil Temp
     current:                    # Optional. Current measurement
       name: Current
