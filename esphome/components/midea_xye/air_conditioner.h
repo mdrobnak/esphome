@@ -171,7 +171,9 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   void setClientCommand(uint8_t command);
   void setup() override;
   void loop() override {}
+  void sendRecv(uint8_t cmdSent);
   void setPowerState(bool state);
+  void setACParams();
 
   /* ############### */
   /* ### ACTIONS ### */
@@ -225,7 +227,7 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   ClimateMode last_on_mode_;
 
   static uint8_t CalculateCRC(uint8_t *Data, uint8_t len);
-  void ParseResponse();
+  void ParseResponse(uint8_t cmdSent);
   uint8_t CalculateSetTime(uint32_t time);
   uint32_t CalculateGetTime(uint8_t time);
   static float CalculateTemp(uint8_t byte);
