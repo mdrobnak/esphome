@@ -156,7 +156,7 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
   // digitalWrite(ComControlPin, RS485_TX_PIN_VALUE);
   this->uart_->write_array(TXData, TX_LEN);
   this->uart_->flush();
-  delay(this->response_timeout);
+  // delay(this->response_timeout);
   // digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
 
   uint8_t i = 0;
