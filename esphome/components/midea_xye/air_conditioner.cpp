@@ -340,7 +340,7 @@ uint32_t AirConditioner::CalculateGetTime(uint8_t time) {
   return timeValue;
 }
 
-float AirConditioner::CalculateTemp(uint8_t byte) { return (byte - 0x30) / 2.0; }
+float AirConditioner::CalculateTemp(uint8_t byte) { return (byte - 0x28) / 2.0; }
 
 ClimateTraits AirConditioner::traits() {
   auto traits = ClimateTraits();
