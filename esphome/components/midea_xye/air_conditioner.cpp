@@ -320,6 +320,21 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
       }
       case 0xC4:
         set_sensor(this->outdoor_sensor_, CalculateTemp(RXData[21]));
+
+        if (RXData[9] != 0x30 || RXData[10] != 0x98 || RXData[11] != 0x00 || RXData[12] != 0x00 || RXData[13] != 0x00 ||
+            RXData[14] != 0x01 || RXData[15] != 0x20 || RXData[19] != 0xBC || RXData[20] != 0xD6 ||
+            RXData[22] != 0x00 || RXData[23] != 0x00 || RXData[24] != 0xFF || RXData[25] != 0x00 ||
+            RXData[26] != 0x80 || RXData[27] != 0x80 || RXData[28] != 0x80 || RXData[29] != 0x80) {
+          ESP_LOGI(Constants::TAG,
+                   "DEBUG C4: "
+                   "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%"
+                   "02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:"
+                   "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
+                   RXData[0], RXData[1], RXData[2], RXData[3], RXData[4], RXData[5], RXData[6], RXData[7], RXData[8],
+                   RXData[9], RXData[10], RXData[11], RXData[12], RXData[13], RXData[14], RXData[15], RXData[16],
+                   RXData[17], RXData[18], RXData[19], RXData[20], RXData[21], RXData[22], RXData[23], RXData[24],
+                   RXData[25], RXData[26], RXData[27], RXData[28], RXData[29], RXData[30], RXData[31]);
+        }
         break;
     }
   } else {
