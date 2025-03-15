@@ -265,8 +265,18 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
         {
           update_property(this->target_temperature, (float) RXData[RX_C0_BYTE_SET_TEMP], need_publish);
-          // The AC will _ramp up_ to the selected mode. It reports this ramp.
           // Don't update the fan mode. Assume it set correctly.
+
+          // Show Heating vs Heat at least in Heat mode. Will figure
+          // out how to determine if compressor is on in other modes later.
+          if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
+            this->action = climate::CLIMATE_ACTION_HEATING;
+            need_publish = true;
+          } else if ((this->action != climate::CLIMATE_ACTION_IDLE) && (RXData[9] & 0x0F) == 0x00) {
+            this->action = climate::CLIMATE_ACTION_IDLE;
+            need_publish = true;
+          }
+
           if ((this->swing_mode != ClimateSwingMode::CLIMATE_SWING_OFF) !=
               (bool) (RXData[RX_C0_BYTE_MODE_FLAGS] & MODE_FLAG_SWING))
             need_publish = true;
@@ -392,6 +402,9 @@ ClimateTraits AirConditioner::traits() {
     traits.add_supported_swing_mode(ClimateSwingMode::CLIMATE_SWING_OFF);
   if (!traits.get_supported_presets().empty())
     traits.add_supported_preset(ClimatePreset::CLIMATE_PRESET_NONE);
+
+  traits.set_supports_action(true);
+
   return traits;
 }
 
