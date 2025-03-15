@@ -273,6 +273,16 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             need_publish = true;
             this->fan_mode = fan_mode;
           }
+          if ((this->mode == climate::CLIMATE_MODE_HEAT) &&
+              (RXData[9] & 0x0F) != 0x00) {
+            this->action = climate::CLIMATE_ACTION_HEATING;
+            need_publish = true;
+          } else if ((this->action != climate::CLIMATE_ACTION_IDLE) &&
+                     (RXData[9] & 0x0F) == 0x00) {
+            this->action = climate::CLIMATE_ACTION_IDLE;
+            need_publish = true;
+          }
+
           if ((this->swing_mode != ClimateSwingMode::CLIMATE_SWING_OFF) !=
               (bool)(RXData[RX_BYTE_MODE_FLAGS] & MODE_FLAG_SWING))
             need_publish = true;
@@ -406,6 +416,9 @@ ClimateTraits AirConditioner::traits() {
     traits.add_supported_swing_mode(ClimateSwingMode::CLIMATE_SWING_OFF);
   if (!traits.get_supported_presets().empty())
     traits.add_supported_preset(ClimatePreset::CLIMATE_PRESET_NONE);
+
+  traits.set_supports_action(true);
+
   return traits;
 }
 
