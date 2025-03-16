@@ -161,15 +161,19 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
 
   while (this->uart_->available()) {
     this->uart_->read_byte(&serialData);
+    // ESP_LOGI(Constants::TAG, "Read Byte: %02X", serialData);
     if (serialData == PREAMBLE) {
+      //      ESP_LOGI(Constants::TAG, "Start Frame");
       frameStart = true;
       RXData[i++] = serialData;
     } else if (serialData == PROLOGUE) {
+      //    ESP_LOGI(Constants::TAG, "End Frame");
       frameStart = false;
       RXData[i] = serialData;
       break;
     } else if (i == (RX_LEN - 1)) {
       // We've hit the end of the line...
+      ESP_LOGE(Constants::TAG, "Almost a buffer overflow!");
       break;
     } else if (frameStart) {
       // Normal state
@@ -177,8 +181,29 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
     }
   }
 
-  ESP_LOGI(Constants::TAG, "Packet length: %d", i);
-  ParseResponse(cmdSent);
+  if (i == 15) {
+    // Received outgoing packet
+    ESP_LOGI("REMOTE",
+             "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:"
+             "%02X:%02X:%02X",
+             RXData[0], RXData[1], RXData[2], RXData[3], RXData[4], RXData[5],
+             RXData[6], RXData[7], RXData[8], RXData[9], RXData[10], RXData[11],
+             RXData[12], RXData[13], RXData[14], RXData[15]);
+  } else if (i == 31) {
+    ESP_LOGI("RESPONSE",
+             "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%"
+             "02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:"
+             "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
+             RXData[0], RXData[1], RXData[2], RXData[3], RXData[4], RXData[5],
+             RXData[6], RXData[7], RXData[8], RXData[9], RXData[10], RXData[11],
+             RXData[12], RXData[13], RXData[14], RXData[15], RXData[16],
+             RXData[17], RXData[18], RXData[19], RXData[20], RXData[21],
+             RXData[22], RXData[23], RXData[24], RXData[25], RXData[26],
+             RXData[27], RXData[28], RXData[29], RXData[30], RXData[31]);
+    ParseResponse(cmdSent);
+  } else {
+    ESP_LOGI(Constants::TAG, "Packet length: %d", i);
+  }
 }
 
 void AirConditioner::update() {
@@ -366,7 +391,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         }
         break;
     }
-  }// else {
+  }  // else {
   //  ESP_LOGE(Constants::TAG, "Received invalid response from AC");
   //}
 
