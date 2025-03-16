@@ -155,18 +155,30 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
   delay(this->response_timeout);
   // digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
 
+  bool frameStart = false;
+  uint8_t serialData = 0x00;
   uint8_t i = 0;
+
   while (this->uart_->available()) {
-    if (i < RX_LEN) this->uart_->read_byte(&RXData[i]);
-    i++;
+    this->uart_->read_byte(&serialData);
+    if (serialData == PREAMBLE) {
+      frameStart = true;
+      RXData[i++] = serialData;
+    } else if (serialData == PROLOGUE) {
+      frameStart = false;
+      RXData[i] = serialData;
+      break;
+    } else if (i == (RX_LEN - 1)) {
+      // We've hit the end of the line...
+      break;
+    } else if (frameStart) {
+      // Normal state
+      RXData[i++] = serialData;
+    }
   }
-  if (i == RX_LEN) {
-    ParseResponse(cmdSent);
-  } else {
-    ESP_LOGE(Constants::TAG,
-             "Received incorrect message length from AC for Command %02X",
-             cmdSent);
-  }
+
+  ESP_LOGI(Constants::TAG, "Packet length: %d", i);
+  ParseResponse(cmdSent);
 }
 
 void AirConditioner::update() {
@@ -354,9 +366,9 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         }
         break;
     }
-  } else {
-    ESP_LOGE(Constants::TAG, "Received invalid response from AC");
-  }
+  }// else {
+  //  ESP_LOGE(Constants::TAG, "Received invalid response from AC");
+  //}
 
   ForceReadNextCycle = 0;
 }
