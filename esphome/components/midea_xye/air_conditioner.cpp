@@ -201,8 +201,6 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
              RXData[22], RXData[23], RXData[24], RXData[25], RXData[26],
              RXData[27], RXData[28], RXData[29], RXData[30], RXData[31]);
     ParseResponse(cmdSent);
-  } else {
-    ESP_LOGI(Constants::TAG, "Packet length: %d", i);
   }
 }
 
