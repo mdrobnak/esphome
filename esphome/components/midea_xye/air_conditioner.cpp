@@ -206,7 +206,6 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
 
 void AirConditioner::update() {
   uint8_t cmdSent = 0x00;
-  ESP_LOGI(Constants::TAG, "%d", millis());
   if (UpdateNextCycle == 1)  // Set on this cycle
   {
     setACParams();
