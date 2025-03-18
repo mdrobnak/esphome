@@ -46,15 +46,6 @@ void AirConditioner::setup() {
 
   // Start up in Auto fan mode (since unit doesn't report it correctly)
   this->fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
-
-  // Set interface to Celcius
-  setClientCommand(CLIENT_COMMAND_CELCIUS);
-  this->uart_->write_array(TXData, TX_LEN);
-  this->uart_->flush();
-  delay(this->response_timeout);
-  uint8_t data;
-  while (this->uart_->available())
-    this->uart_->read_byte(&data);
 }
 
 // TODO: Not sure if we really need this.
