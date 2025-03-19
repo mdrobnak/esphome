@@ -87,7 +87,7 @@ void AirConditioner::setClientCommand(uint8_t command) {
 }
 
 void AirConditioner::update() {
-  if (0 == UpdateNextCycle) {
+  if (UpdateNextCycle == 0) {
     // construct query command
     setClientCommand(CLIENT_COMMAND_QUERY);
 
@@ -185,13 +185,13 @@ uint8_t AirConditioner::CalculateCRC(uint8_t *data, uint8_t len) {
 
 void AirConditioner::ParseResponse() {
   // validate the response
-  if ((PREAMBLE == RXData[RX_BYTE_PREAMBLE]) && (PROLOGUE == RXData[RX_BYTE_PROLOGUE]) &&
-      (TO_CLIENT == RXData[RX_BYTE_TO_CLIENT]) && (RXData[RX_BYTE_CRC] == CalculateCRC(RXData, RX_LEN))) {
+  if ((RXData[RX_BYTE_PREAMBLE] == PREAMBLE) && (RXData[RX_BYTE_PROLOGUE] == PROLOGUE) &&
+      (RXData[RX_BYTE_TO_CLIENT] == TO_CLIENT) && (RXData[RX_BYTE_CRC] == CalculateCRC(RXData, RX_LEN))) {
     ClimateMode mode = ClimateMode::CLIMATE_MODE_OFF;
     ClimateFanMode fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
     ClimatePreset preset = ClimatePreset::CLIMATE_PRESET_NONE;
 
-    switch (RXData[RX_BYTE_OP_MODE]) {
+    switch (RXData[RX_C0_BYTE_OP_MODE]) {
       case OP_MODE_OFF:
         mode = ClimateMode::CLIMATE_MODE_OFF;
         break;
@@ -212,7 +212,7 @@ void AirConditioner::ParseResponse() {
         break;
     }
 
-    switch (RXData[RX_BYTE_FAN_MODE]) {
+    switch (RXData[RX_C0_BYTE_FAN_MODE]) {
       case FAN_MODE_HIGH:
         fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
         break;
@@ -226,18 +226,18 @@ void AirConditioner::ParseResponse() {
         fan_mode = ClimateFanMode::CLIMATE_FAN_OFF;
         break;
     }
-    if (RXData[RX_BYTE_FAN_MODE] & FAN_MODE_AUTO) {
+    if (RXData[RX_C0_BYTE_FAN_MODE] & FAN_MODE_AUTO) {
       fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
     }
 
-    if (RXData[RX_BYTE_MODE_FLAGS] & MODE_FLAG_AUX_HEAT)
+    if (RXData[RX_C0_BYTE_MODE_FLAGS] & MODE_FLAG_AUX_HEAT)
       preset = ClimatePreset::CLIMATE_PRESET_BOOST;
-    else if (RXData[RX_BYTE_MODE_FLAGS] & MODE_FLAG_ECO)
+    else if (RXData[RX_C0_BYTE_MODE_FLAGS] & MODE_FLAG_ECO)
       preset = ClimatePreset::CLIMATE_PRESET_SLEEP;
 
     bool need_publish = false;
 
-    update_property(this->current_temperature, (float) CalculateTemp(RXData[RX_BYTE_T1_TEMP]), need_publish);
+    update_property(this->current_temperature, (float) CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
     update_property(this->mode, mode, need_publish);
     if (mode != ClimateMode::CLIMATE_MODE_OFF)  // Don't update below states
                                                 // unless mode is an ON state
@@ -248,7 +248,7 @@ void AirConditioner::ParseResponse() {
     if (mode != ClimateMode::CLIMATE_MODE_OFF ||
         ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
     {
-      update_property(this->target_temperature, (float) RXData[RX_BYTE_SET_TEMP], need_publish);
+      update_property(this->target_temperature, (float) RXData[RX_C0_BYTE_SET_TEMP], need_publish);
       // Don't update fan mode when we set it to auto
       // It seems the heatpump doesn't report back Auto mode - it reports back
       // the current mode
@@ -257,10 +257,10 @@ void AirConditioner::ParseResponse() {
         this->fan_mode = fan_mode;
       }
       if ((this->swing_mode != ClimateSwingMode::CLIMATE_SWING_OFF) !=
-          (bool) (RXData[RX_BYTE_MODE_FLAGS] & MODE_FLAG_SWING))
+          (bool) (RXData[RX_C0_BYTE_MODE_FLAGS] & MODE_FLAG_SWING))
         need_publish = true;
-      this->swing_mode = (RXData[RX_BYTE_MODE_FLAGS] & MODE_FLAG_SWING) ? ClimateSwingMode::CLIMATE_SWING_VERTICAL
-                                                                        : ClimateSwingMode::CLIMATE_SWING_OFF;
+      this->swing_mode = (RXData[RX_C0_BYTE_MODE_FLAGS] & MODE_FLAG_SWING) ? ClimateSwingMode::CLIMATE_SWING_VERTICAL
+                                                                           : ClimateSwingMode::CLIMATE_SWING_OFF;
       if (this->preset != preset)
         need_publish = true;
       this->preset = preset;
@@ -269,15 +269,16 @@ void AirConditioner::ParseResponse() {
     if (need_publish)
       this->publish_state();
 
-    set_sensor(this->outdoor_sensor_, CalculateTemp(RXData[RX_BYTE_T3_TEMP]));
-    set_sensor(this->temperature_2a_sensor_, CalculateTemp(RXData[RX_BYTE_T2A_TEMP]));
-    set_sensor(this->temperature_2b_sensor_, CalculateTemp(RXData[RX_BYTE_T2B_TEMP]));
-    set_sensor(this->current_sensor_, RXData[RX_BYTE_CURRENT]);
-    set_sensor(this->timer_start_sensor_, CalculateGetTime(RXData[RX_BYTE_TIMER_START]));
-    set_sensor(this->timer_stop_sensor_, CalculateGetTime(RXData[RX_BYTE_TIMER_STOP]));
-    set_sensor(this->error_flags_sensor_, (RXData[RX_BYTE_ERROR_FLAGS1] << 0) | (RXData[RX_BYTE_ERROR_FLAGS2] << 8));
+    set_sensor(this->outdoor_sensor_, CalculateTemp(RXData[RX_C0_BYTE_T3_TEMP]));
+    set_sensor(this->temperature_2a_sensor_, CalculateTemp(RXData[RX_C0_BYTE_T2A_TEMP]));
+    set_sensor(this->temperature_2b_sensor_, CalculateTemp(RXData[RX_C0_BYTE_T2B_TEMP]));
+    set_sensor(this->current_sensor_, RXData[RX_C0_BYTE_CURRENT]);
+    set_sensor(this->timer_start_sensor_, CalculateGetTime(RXData[RX_C0_BYTE_TIMER_START]));
+    set_sensor(this->timer_stop_sensor_, CalculateGetTime(RXData[RX_C0_BYTE_TIMER_STOP]));
+    set_sensor(this->error_flags_sensor_,
+               (RXData[RX_C0_BYTE_ERROR_FLAGS1] << 0) | (RXData[RX_C0_BYTE_ERROR_FLAGS2] << 8));
     set_sensor(this->protect_flags_sensor_,
-               (RXData[RX_BYTE_PROTECT_FLAGS1] << 0) | (RXData[RX_BYTE_PROTECT_FLAGS2] << 8));
+               (RXData[RX_C0_BYTE_PROTECT_FLAGS1] << 0) | (RXData[RX_C0_BYTE_PROTECT_FLAGS2] << 8));
 
   } else {
     ESP_LOGE(Constants::TAG, "Received invalid response from AC");
