@@ -12,8 +12,8 @@
 #include "ir_transmitter.h"
 
 // CLIENT command structure
-#define PREAMBLE 0XAA
-#define PROLOGUE 0X55
+#define PREAMBLE 0xAA
+#define PROLOGUE 0x55
 
 #define CLIENT_COMMAND_QUERY 0xC0
 #define CLIENT_COMMAND_SET 0xC3
