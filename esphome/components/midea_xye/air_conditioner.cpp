@@ -58,7 +58,7 @@ void AirConditioner::setPowerState(bool state) {
   UpdateNextCycle = 1;
 }
 
-void AirConditioner::setClientCommand(uint8_t command) {
+void AirConditioner::prepareTXData(uint8_t command) {
   TXData[0] = PREAMBLE;
   TXData[1] = command;
   TXData[2] = SERVER_ID;
@@ -79,7 +79,7 @@ void AirConditioner::setClientCommand(uint8_t command) {
 
 void AirConditioner::setACParams() {
   // construct set command
-  setClientCommand(CLIENT_COMMAND_SET);
+  prepareTXData(CLIENT_COMMAND_SET);
 
   // set mode
   switch (this->mode) {
@@ -169,10 +169,10 @@ void AirConditioner::update() {
     sendRecv(cmdSent);
   } else {
     // construct query command
-    setClientCommand(CLIENT_COMMAND_QUERY);
+    prepareTXData(CLIENT_COMMAND_QUERY);
     cmdSent = CLIENT_COMMAND_QUERY;
     sendRecv(cmdSent);
-    setClientCommand(0xC4);
+    prepareTXData(0xC4);
     cmdSent = 0xC4;
     sendRecv(cmdSent);
   }

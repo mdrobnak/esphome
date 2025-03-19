@@ -168,7 +168,7 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   void set_humidity_setpoint_sensor(Sensor *sensor) { this->humidity_sensor_ = sensor; }
   void set_power_sensor(Sensor *sensor) { this->power_sensor_ = sensor; }
   void update() override;
-  void setClientCommand(uint8_t command);
+  void prepareTXData(uint8_t command);
   void setup() override;
   void loop() override {}
   void sendRecv(uint8_t cmdSent);
