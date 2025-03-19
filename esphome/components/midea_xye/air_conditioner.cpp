@@ -130,7 +130,7 @@ void AirConditioner::setACParams() {
   // set temp
   TXData[8] = this->target_temperature;
   // set mode flags
-  TXData[12] =
+  TXData[11] =
       ((this->preset == ClimatePreset::CLIMATE_PRESET_BOOST) *
        MODE_FLAG_AUX_HEAT) |
       ((this->preset == ClimatePreset::CLIMATE_PRESET_SLEEP) * MODE_FLAG_ECO) |
