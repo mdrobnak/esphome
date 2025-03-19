@@ -155,6 +155,13 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
   delay(this->response_timeout);
   // digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
 
+  ESP_LOGI("SENT",
+           "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:"
+           "%02X:%02X:%02X",
+           TXData[0], TXData[1], TXData[2], TXData[3], TXData[4], TXData[5],
+           TXData[6], TXData[7], TXData[8], TXData[9], TXData[10], TXData[11],
+           TXData[12], TXData[13], TXData[14], TXData[15]);
+
   bool frameStart = false;
   uint8_t serialData = 0x00;
   uint8_t i = 0;
