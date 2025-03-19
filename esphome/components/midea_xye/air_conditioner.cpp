@@ -105,21 +105,27 @@ void AirConditioner::setACParams() {
       TXData[6] = OP_MODE_OFF;
   }
   // set fan mode
-  switch (this->fan_mode.value()) {
-    case ClimateFanMode::CLIMATE_FAN_AUTO:
-      TXData[7] = FAN_MODE_AUTO;
-      break;
-    case ClimateFanMode::CLIMATE_FAN_HIGH:
-      TXData[7] = FAN_MODE_HIGH;
-      break;
-    case ClimateFanMode::CLIMATE_FAN_MEDIUM:
-      TXData[7] = FAN_MODE_MEDIUM;
-      break;
-    case ClimateFanMode::CLIMATE_FAN_LOW:
-      TXData[7] = FAN_MODE_LOW;
-      break;
-    default:
-      TXData[7] = FAN_MODE_AUTO;
+  if (this->mode != ClimateMode::CLIMATE_MODE_HEAT_COOL) {
+    switch (this->fan_mode.value()) {
+      case ClimateFanMode::CLIMATE_FAN_AUTO:
+        TXData[7] = FAN_MODE_AUTO;
+        break;
+      case ClimateFanMode::CLIMATE_FAN_HIGH:
+        TXData[7] = FAN_MODE_HIGH;
+        break;
+      case ClimateFanMode::CLIMATE_FAN_MEDIUM:
+        TXData[7] = FAN_MODE_MEDIUM;
+        break;
+      case ClimateFanMode::CLIMATE_FAN_LOW:
+        TXData[7] = FAN_MODE_LOW;
+        break;
+      default:
+        TXData[7] = FAN_MODE_AUTO;
+    }
+  } else {
+    // Auto is full-auto - can't set fan mode either.
+    this->fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
+    TXData[7] = FAN_MODE_AUTO;
   }
   // set temp
   TXData[8] = this->target_temperature;
@@ -221,7 +227,8 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             break;
         }
 
-        switch (RXData[RX_C0_BYTE_FAN_MODE]) {
+        uint8_t current_fan_speed = RXData[RX_C0_BYTE_FAN_MODE] & 0x0F;
+        switch (current_fan_speed) {
           case FAN_MODE_HIGH:
             fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
             break;
@@ -235,7 +242,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             fan_mode = ClimateFanMode::CLIMATE_FAN_OFF;
             break;
         }
-        if (RXData[RX_C0_BYTE_FAN_MODE] & FAN_MODE_AUTO) {
+        if ((RXData[RX_C0_BYTE_FAN_MODE] & FAN_MODE_AUTO) == FAN_MODE_AUTO) {
           fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
         }
 
@@ -258,13 +265,8 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
         {
           update_property(this->target_temperature, (float) RXData[RX_C0_BYTE_SET_TEMP], need_publish);
-          // Don't update fan mode when we set it to auto
-          // It seems the heatpump doesn't report back Auto mode - it reports
-          // back the current mode
-          if (this->fan_mode != fan_mode && this->fan_mode != ClimateFanMode::CLIMATE_FAN_AUTO) {
-            need_publish = true;
-            this->fan_mode = fan_mode;
-          }
+          // The AC will _ramp up_ to the selected mode. It reports this ramp.
+          // Don't update the fan mode. Assume it set correctly.
           if ((this->swing_mode != ClimateSwingMode::CLIMATE_SWING_OFF) !=
               (bool) (RXData[RX_C0_BYTE_MODE_FLAGS] & MODE_FLAG_SWING))
             need_publish = true;
