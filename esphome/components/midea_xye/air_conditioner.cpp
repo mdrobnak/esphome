@@ -226,7 +226,8 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             break;
         }
 
-        switch (RXData[RX_BYTE_FAN_MODE]) {
+        uint8_t current_fan_speed = RXData[RX_BYTE_FAN_MODE] & 0x0F;
+        switch (current_fan_speed) {
           case FAN_MODE_HIGH:
             fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
             break;
@@ -240,7 +241,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             fan_mode = ClimateFanMode::CLIMATE_FAN_OFF;
             break;
         }
-        if (RXData[RX_BYTE_FAN_MODE] & FAN_MODE_AUTO) {
+        if ((RXData[RX_BYTE_FAN_MODE] & FAN_MODE_AUTO) == 0x80) {
           fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
         }
 
@@ -268,11 +269,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         {
           update_property(this->target_temperature,
                           (float)RXData[RX_BYTE_SET_TEMP], need_publish);
-          // Don't update fan mode when we set it to auto
-          // It seems the heatpump doesn't report back Auto mode - it reports
-          // back the current mode
-          if (this->fan_mode != fan_mode &&
-              this->fan_mode != ClimateFanMode::CLIMATE_FAN_AUTO) {
+          if (this->fan_mode != fan_mode) {
             need_publish = true;
             this->fan_mode = fan_mode;
           }
