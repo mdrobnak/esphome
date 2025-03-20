@@ -221,7 +221,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         ClimateFanMode fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
         ClimatePreset preset = ClimatePreset::CLIMATE_PRESET_NONE;
 
-        switch (RXData[RX_C0_BYTE_OP_MODE]) {
+        switch (RXData[RX_C0_BYTE_OP_MODE] & 0xEF) {
           case OP_MODE_OFF:
             mode = ClimateMode::CLIMATE_MODE_OFF;
             break;
@@ -240,6 +240,14 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           case OP_MODE_COOL:
             mode = ClimateMode::CLIMATE_MODE_COOL;
             break;
+        }
+
+        // The unit seems to show 0x10 when off after running auto.
+        // Check to see if we haven't already matched to OFF state.
+        // If not, and we match otherwise, we are in auto mode.
+        if (mode != ClimateMode::CLIMATE_MODE_OFF &&
+            ((RXData[RX_C0_BYTE_OP_MODE] & OP_MODE_AUTO_FLAG) == OP_MODE_AUTO_FLAG)) {
+          mode = ClimateMode::CLIMATE_MODE_HEAT_COOL;
         }
 
         uint8_t current_fan_speed = RXData[RX_C0_BYTE_FAN_MODE] & 0x0F;
@@ -292,6 +300,23 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             need_publish = true;
           }
 
+          if ((this->mode == climate::CLIMATE_MODE_HEAT_COOL) &&
+              ((RXData[RX_C0_BYTE_OP_MODE] & 0xEF) == OP_MODE_COOL) &&
+              (this->action != climate::CLIMATE_ACTION_COOLING)) {
+            this->action = climate::CLIMATE_ACTION_COOLING;
+            need_publish = true;
+          } else if ((this->mode == climate::CLIMATE_MODE_HEAT_COOL) &&
+                     ((RXData[RX_C0_BYTE_OP_MODE] & 0xEF) == OP_MODE_FAN) &&
+                     (this->action != climate::CLIMATE_ACTION_FAN)) {
+            this->action = climate::CLIMATE_ACTION_FAN;
+            need_publish = true;
+          } else if ((this->mode == climate::CLIMATE_MODE_HEAT_COOL) &&
+                     ((RXData[RX_C0_BYTE_OP_MODE] & 0xEF) == OP_MODE_HEAT) &&
+                     (this->action != climate::CLIMATE_ACTION_HEATING)) {
+            this->action = climate::CLIMATE_ACTION_HEATING;
+            need_publish = true;
+          }
+
           if ((this->swing_mode != ClimateSwingMode::CLIMATE_SWING_OFF) !=
               (bool) (RXData[RX_C0_BYTE_MODE_FLAGS] & MODE_FLAG_SWING))
             need_publish = true;
@@ -301,6 +326,9 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           if (this->preset != preset)
             need_publish = true;
           this->preset = preset;
+        } else if ((this->action != climate::CLIMATE_ACTION_IDLE) && (RXData[9] & 0x0F) == 0x00) {
+          this->action = climate::CLIMATE_ACTION_IDLE;
+          need_publish = true;
         }
 
         if (need_publish)
