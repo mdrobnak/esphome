@@ -42,6 +42,7 @@ climate:
     name: Heatpump
     period: 1s                  # Optional. Defaults to 1s
     timeout: 100ms              # Optional. Defaults to 100ms
+    fahrenheit: false           # Optional. Defaults to false.
     #beeper: true               # Optional. Beep on commands.
     visual:                     # Optional. Example of visual settings override.
       min_temperature: 17 °C    # min: 17
@@ -83,28 +84,23 @@ climate:
 ```
 
 # What works
-- Setting mode (off, fan, cool, heat, dry). Auto mode doesn't work for me
-- Setting temperature. Can send in C or F.
+- Setting mode (off, auto, fan, cool, heat, dry).
+- Setting temperature. Can send in C or F. Handles AC results in C or F. Must manually set in YAML.
 - Setting fan mode (auto, low, med, high).
-- Reading inside, outside air temperatures, and inside coil temperature.
+- Reading inside, outside air temperatures, inside coil temperature, and outside coil temperature.
 - Reading timer start/stop times (set by remote)
+- Follow-Me temperature. Point it at a sensor and this works well.
 
 # What doesn't work
-- Auto mode always defaults to heat (regardless of temperature)
-- Outside coil temperature doesn't work for me (shows 0)
 - Current reading always shows 255
-- Reading back fan mode when in Auto shows the acutal mode (i.e. no way to check it's in auto)
-- Setting turbo (aux heat), sleep doesn't work (although reading it back from the unit does seem to)
 - Setting swing mode 
 
 # Not yet implemented
 - Setting timers direct to unit. No real need since automations can do this 
-- Need to check calibration calculation for temperature
 - Figure out how to force display to C or F. Setting temp in C doesn't force display to C.
 - Freeze protection
 - Silent mode
 - Lock/Unlock
 
 # Not tested
-- IR integration
-
+- IR integration (However, not needed for Follow-Me)
