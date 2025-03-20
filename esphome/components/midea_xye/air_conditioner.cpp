@@ -91,7 +91,7 @@ void AirConditioner::setACParams() {
       TXData[6] = OP_MODE_OFF;
       break;
     case ClimateMode::CLIMATE_MODE_HEAT_COOL:
-      TXData[6] = OP_MODE_AUTO;
+      TXData[6] = SET_OP_MODE_AUTO;
       break;
     case ClimateMode::CLIMATE_MODE_FAN_ONLY:
       TXData[6] = OP_MODE_FAN;

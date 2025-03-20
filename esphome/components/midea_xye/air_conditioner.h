@@ -24,7 +24,7 @@
 #define FROM_CLIENT 0x00
 
 #define OP_MODE_OFF 0x00
-#define OP_MODE_AUTO 0x80
+#define OP_MODE_AUTO 0x91
 #define OP_MODE_FAN 0x81
 #define OP_MODE_DRY 0x82
 #define OP_MODE_HEAT 0x84
@@ -61,6 +61,8 @@
 #define SERVER_COMMAND_SET 0xC3
 #define SERVER_COMMAND_LOCK 0xCC
 #define SERVER_COMMAND_UNLOCK 0xCD
+
+#define SET_OP_MODE_AUTO 0x90
 
 #define TO_CLIENT 0x00
 
