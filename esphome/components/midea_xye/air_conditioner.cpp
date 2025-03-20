@@ -275,7 +275,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         bool need_publish = false;
 
         update_property(this->current_temperature,
-                        (float)CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]),
+                        CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]),
                         need_publish);
         update_property(this->mode, mode, need_publish);
         if (mode !=
