@@ -25,6 +25,7 @@ void update_property(T &property, const T &value, bool &flag) {
 }
 
 void AirConditioner::control(const ClimateCall &call) {
+  ESP_LOGD(Constants::TAG, "--- BEGIN CONTROL ---");
   if (call.get_mode().has_value()) {
     this->mode = call.get_mode().value();
     followMeInit = false;
@@ -39,6 +40,7 @@ void AirConditioner::control(const ClimateCall &call) {
   this->publish_state();
 
   UpdateNextCycle = 1;
+  ESP_LOGD(Constants::TAG, "--- END CONTROL ---");
 }
 
 void AirConditioner::setup() {
@@ -82,6 +84,7 @@ void AirConditioner::prepareTXData(uint8_t command) {
 }
 
 void AirConditioner::setACParams() {
+  ESP_LOGD(Constants::TAG, "setACParams called");
   // construct set command
   prepareTXData(CLIENT_COMMAND_SET);
 
@@ -150,10 +153,11 @@ void AirConditioner::setACParams() {
 
   TXData[14] = CalculateCRC(TXData, TX_LEN);
 
-  UpdateNextCycle = 0;
+  UpdateNextCycle = 3;
 }
 
 void AirConditioner::sendRecv(uint8_t cmdSent) {
+  ESP_LOGD(Constants::TAG, "sendRecv called");
   // TODO: Reimplement flow control for manual RS485 flow control chips
   // digitalWrite(ComControlPin, RS485_TX_PIN_VALUE);
   this->uart_->write_array(TXData, TX_LEN);
@@ -167,7 +171,9 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
     i++;
   }
   if (i == RX_LEN) {
-    ParseResponse(cmdSent);
+    if (cmdSent != 0xC3) {
+      ParseResponse(cmdSent);
+    }
   } else {
     ESP_LOGE(Constants::TAG,
              "Received incorrect message length from AC for Command %02X",
@@ -176,8 +182,12 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
 }
 
 void AirConditioner::update() {
+  ESP_LOGD(Constants::TAG, "Update Called - UpdateNextCycle = %d",
+           UpdateNextCycle);
   uint8_t cmdSent = 0x00;
-  if (UpdateNextCycle == 1)  // Set on this cycle
+  if (UpdateNextCycle == 2) {
+    UpdateNextCycle = 0;
+  } else if (UpdateNextCycle == 1)  // Set on this cycle
   {
     setACParams();
     cmdSent = CLIENT_COMMAND_SET;
@@ -194,7 +204,7 @@ void AirConditioner::update() {
       sendRecv(cmdSent);
       followMeInit = true;
     }
-  } else {
+  } else if (UpdateNextCycle == 0) {
     // construct query command
     prepareTXData(CLIENT_COMMAND_QUERY);
     cmdSent = CLIENT_COMMAND_QUERY;
@@ -202,6 +212,8 @@ void AirConditioner::update() {
     prepareTXData(0xC4);
     cmdSent = 0xC4;
     sendRecv(cmdSent);
+  } else {
+    UpdateNextCycle--;
   }
 }
 
@@ -216,6 +228,7 @@ uint8_t AirConditioner::CalculateCRC(uint8_t *data, uint8_t len) {
 }
 
 void AirConditioner::ParseResponse(uint8_t cmdSent) {
+  ESP_LOGD(Constants::TAG, "ParseResponse called");
   // validate the response
   if ((RXData[RX_BYTE_PREAMBLE] == PREAMBLE) &&
       (RXData[RX_BYTE_PROLOGUE] == PROLOGUE) &&
