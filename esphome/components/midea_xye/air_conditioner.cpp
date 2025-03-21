@@ -153,7 +153,7 @@ void AirConditioner::setACParams() {
 
   TXData[14] = CalculateCRC(TXData, TX_LEN);
 
-  UpdateNextCycle = 2;
+  UpdateNextCycle = 0;
 }
 
 void AirConditioner::sendRecv(uint8_t cmdSent) {
