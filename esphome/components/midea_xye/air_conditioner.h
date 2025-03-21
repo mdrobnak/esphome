@@ -13,6 +13,13 @@
 #include "ir_transmitter.h"
 #include "static_pressure_number.h"
 
+// STATES
+#define STATE_WAIT_DATA 0
+#define STATE_SEND_C3 1
+#define STATE_SEND_C6 2
+#define STATE_SEND_C0 3
+#define STATE_SEND_C4 4
+
 // CLIENT command structure
 #define PREAMBLE 0xAA
 #define PROLOGUE 0x55
@@ -211,8 +218,9 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   uint8_t RXData[RX_LEN];
 
  private:
-  uint8_t UpdateNextCycle;
+  uint8_t controlState;
   uint8_t ForceReadNextCycle;
+  uint8_t queuedCommand;
   uint32_t response_timeout;
   bool followMeInit;
   uint8_t lastFollowMeTemperature;

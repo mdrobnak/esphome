@@ -42,13 +42,17 @@ void AirConditioner::control(const ClimateCall &call) {
     this->preset = call.get_preset().value();
   this->publish_state();
 
-  UpdateNextCycle = 1;
+  if (controlState != STATE_WAIT_DATA) {
+    controlState = STATE_SEND_C3;
+  } else {
+    queuedCommand = STATE_SEND_C3;
+  }
 }
 
 void AirConditioner::setup() {
   // this->uart_->check_uart_settings(4800, 1, UART_CONFIG_PARITY_NONE, 8);
   this->last_on_mode_ = *this->supported_modes_.begin();
-  UpdateNextCycle = 0;
+  controlState = STATE_SEND_C0;
   ForceReadNextCycle = 1;
   followMeInit = false;
 
@@ -63,7 +67,11 @@ void AirConditioner::setPowerState(bool state) {
   else
     this->mode = ClimateMode::CLIMATE_MODE_OFF;
 
-  UpdateNextCycle = 1;
+  if (controlState != STATE_WAIT_DATA) {
+    controlState = STATE_SEND_C3;
+  } else {
+    queuedCommand = STATE_SEND_C3;
+  }
 }
 
 void AirConditioner::prepareTXData(uint8_t command) {
@@ -157,8 +165,6 @@ void AirConditioner::setACParams() {
   // CalculateSetTime(DesiredState.TimerStop);
 
   TXData[14] = CalculateCRC(TXData, TX_LEN);
-
-  UpdateNextCycle = 0;
 }
 
 void AirConditioner::sendRecv(uint8_t cmdSent) {
@@ -166,51 +172,93 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
   // digitalWrite(ComControlPin, RS485_TX_PIN_VALUE);
   this->uart_->write_array(TXData, TX_LEN);
   this->uart_->flush();
-  delay(this->response_timeout);
-  // digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
+  controlState = STATE_WAIT_DATA;
+  // Delay the remaining for 100 ms to allow response from the AC unit.
+  this->set_timeout("read-result", 100, [this, cmdSent]() {
+    // digitalWrite(ComControlPin, RS485_RX_PIN_VALUE);
 
-  uint8_t i = 0;
-  while (this->uart_->available()) {
-    if (i < RX_LEN)
-      this->uart_->read_byte(&RXData[i]);
-    i++;
-  }
-  if (i == RX_LEN) {
-    if (cmdSent != 0xC3) {
-      ParseResponse(cmdSent);
+    uint8_t i = 0;
+    while (this->uart_->available()) {
+      if (i < RX_LEN)
+        this->uart_->read_byte(&RXData[i]);
+      i++;
     }
-  } else {
-    ESP_LOGE(Constants::TAG, "Received incorrect message length from AC for Command %02X", cmdSent);
-  }
+    if (i == RX_LEN) {
+      if (cmdSent != 0xC3) {
+        ParseResponse(cmdSent);
+      }
+      if (queuedCommand != 0) {
+        controlState = queuedCommand;
+        queuedCommand = 0;
+      } else {
+        switch (cmdSent) {
+          case 0xC0:
+            controlState = STATE_SEND_C4;
+            break;
+          case 0xC3:
+            controlState = STATE_SEND_C6;
+            break;
+          case 0xC4:
+            controlState = STATE_SEND_C0;
+            break;
+          case 0xC6:
+            controlState = STATE_SEND_C0;
+            break;
+        }
+      }
+    } else {
+      ESP_LOGE(Constants::TAG, "Received incorrect message length from AC for Command %02X", cmdSent);
+    }
+  });
 }
 
 void AirConditioner::update() {
   uint8_t cmdSent = 0x00;
-  if (UpdateNextCycle == 1)  // Set on this cycle
-  {
-    setACParams();
-    cmdSent = CLIENT_COMMAND_SET;
-    sendRecv(cmdSent);
-    // If the AC mode changed, follow-me should be
-    // refreshed, if emulating the wired controller's
-    // behavior.
-    if (!followMeInit) {
-      cmdSent = 0xC6;
-      prepareTXData(cmdSent);
-      TXData[10] = 6;
-      TXData[11] = lastFollowMeTemperature;
-      TXData[14] = CalculateCRC(TXData, TX_LEN);
+  // Possible States:
+  // 0: Waiting for Response from Command
+  // 1: Sending Set C3 Command
+  // 2: Sending Set C6 Command
+  // 3: Sending Query C0 Command
+  // 4: Sending Query C4 Command
+  switch (controlState) {
+    case STATE_SEND_C3: {
+      setACParams();
+      cmdSent = CLIENT_COMMAND_SET;
       sendRecv(cmdSent);
-      followMeInit = true;
+      break;
     }
-  } else {
-    // construct query command
-    prepareTXData(CLIENT_COMMAND_QUERY);
-    cmdSent = CLIENT_COMMAND_QUERY;
-    sendRecv(cmdSent);
-    prepareTXData(0xC4);
-    cmdSent = 0xC4;
-    sendRecv(cmdSent);
+    case STATE_SEND_C6: {
+      // If the AC mode changed, follow-me should be
+      // refreshed, if emulating the wired controller's
+      // behavior.
+      if (!followMeInit) {
+        cmdSent = 0xC6;
+        prepareTXData(cmdSent);
+        TXData[10] = 6;
+        TXData[11] = lastFollowMeTemperature;
+        TXData[14] = CalculateCRC(TXData, TX_LEN);
+        sendRecv(cmdSent);
+        followMeInit = true;
+      }
+      break;
+    }
+    case STATE_SEND_C0: {
+      // construct query command
+      prepareTXData(CLIENT_COMMAND_QUERY);
+      cmdSent = CLIENT_COMMAND_QUERY;
+      sendRecv(cmdSent);
+      break;
+    }
+    case STATE_SEND_C4: {
+      prepareTXData(0xC4);
+      cmdSent = 0xC4;
+      sendRecv(cmdSent);
+      break;
+    }
+    case STATE_WAIT_DATA: {
+      // Wait for data to processed. Do nothing during the loop.
+      break;
+    }
   }
 }
 
