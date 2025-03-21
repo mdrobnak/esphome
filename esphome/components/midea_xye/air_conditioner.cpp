@@ -154,7 +154,9 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
     i++;
   }
   if (i == RX_LEN) {
-    ParseResponse(cmdSent);
+    if (cmdSent != 0xC3) {
+      ParseResponse(cmdSent);
+    }
   } else {
     ESP_LOGE(Constants::TAG, "Received incorrect message length from AC for Command %02X", cmdSent);
   }
