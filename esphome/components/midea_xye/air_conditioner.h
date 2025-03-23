@@ -4,12 +4,14 @@
 
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/climate/climate_traits.h"
+#include "esphome/components/number/number.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/uart/uart.h"
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
 #include "esphome/core/log.h"
 #include "ir_transmitter.h"
+#include "static_pressure_number.h"
 
 // CLIENT command structure
 #define PREAMBLE 0xAA
@@ -143,7 +145,7 @@ class Constants {
   static const char *const TAG;
 };
 
-class AirConditioner : public PollingComponent, public climate::Climate {
+class AirConditioner : public PollingComponent, public climate::Climate, public StaticPressureInterface {
  public:
   AirConditioner() : PollingComponent(1000) { this->response_timeout = 100; }
 
@@ -174,6 +176,11 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   void set_humidity_setpoint_sensor(Sensor *sensor) { this->humidity_sensor_ = sensor; }
   void set_power_sensor(Sensor *sensor) { this->power_sensor_ = sensor; }
   void set_use_fahrenheit(bool yesno) { this->use_fahrenheit_ = yesno; }
+  void set_static_pressure_number(StaticPressureNumber *number) {
+    this->static_pressure_number_ = number;
+    number->set_parent(this);
+  }
+  void set_static_pressure(uint8_t value) override;
   void update() override;
   void prepareTXData(uint8_t command);
   void setup() override;
@@ -234,6 +241,7 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   Sensor *protect_flags_sensor_{nullptr};
   Sensor *humidity_sensor_{nullptr};
   Sensor *power_sensor_{nullptr};
+  StaticPressureNumber *static_pressure_number_{nullptr};
   ClimateMode last_on_mode_;
 
   static uint8_t CalculateCRC(uint8_t *Data, uint8_t len);

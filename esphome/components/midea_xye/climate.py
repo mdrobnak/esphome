@@ -1,6 +1,6 @@
 from esphome.core import coroutine
 from esphome import automation
-from esphome.components import climate, sensor, uart, remote_transmitter
+from esphome.components import climate, sensor, uart, remote_transmitter, number
 from esphome.components.remote_base import CONF_TRANSMITTER_ID
 import esphome.config_validation as cv
 import esphome.codegen as cg
@@ -17,6 +17,10 @@ from esphome.const import (
     CONF_TIMEOUT,
     CONF_TEMPERATURE,
     CONF_USE_FAHRENHEIT,
+    CONF_MAX_VALUE,
+    CONF_MIN_VALUE,
+    CONF_ICON,
+    CONF_MODE,
     DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_HUMIDITY,
@@ -44,7 +48,7 @@ from esphome.components.climate import (
 
 #CODEOWNERS = ["@dudanov"]
 DEPENDENCIES = ["climate", "uart", "wifi"]
-AUTO_LOAD = ["sensor"]
+AUTO_LOAD = ["number", "sensor"]
 CONF_OUTDOOR_TEMPERATURE = "outdoor_temperature"
 CONF_TEMPERATURE_2A = "temperature_2a"
 CONF_TEMPERATURE_2B = "temperature_2b"
@@ -56,10 +60,11 @@ CONF_ERROR_FLAGS = "error_flags"
 CONF_PROTECT_FLAGS = "protect_flags"
 CONF_POWER_USAGE = "power_usage"
 CONF_HUMIDITY_SETPOINT = "humidity_setpoint"
+CONF_STATIC_PRESSURE = "static_pressure"
 midea_ac_ns = cg.esphome_ns.namespace("midea").namespace("ac")
 AirConditioner = midea_ac_ns.class_("AirConditioner", climate.Climate, cg.Component)
+StaticPressureNumber = midea_ac_ns.class_("StaticPressureNumber", number.Number, cg.Component)
 Capabilities = midea_ac_ns.namespace("Constants")
-
 
 def templatize(value):
     if isinstance(value, cv.Schema):
@@ -143,6 +148,13 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_CUSTOM_FAN_MODES): cv.ensure_list(
                 validate_custom_fan_modes
             ),
+            cv.Optional(CONF_STATIC_PRESSURE): number.NUMBER_SCHEMA.extend({
+                cv.GenerateID(): cv.declare_id(StaticPressureNumber),
+                cv.Optional(CONF_MIN_VALUE, default=0): cv.float_,
+                cv.Optional(CONF_MAX_VALUE, default=15): cv.float_,
+                cv.Optional(CONF_ICON, default="mdi:gauge"): cv.icon,
+                cv.Optional(CONF_MODE, default="BOX"): cv.enum(number.NUMBER_MODES, upper=True),
+            }),
             cv.Optional(CONF_OUTDOOR_TEMPERATURE): sensor.sensor_schema(
                 unit_of_measurement=UNIT_CELSIUS,
                 icon=ICON_THERMOMETER,
@@ -355,6 +367,14 @@ async def to_code(config):
         cg.add(var.set_custom_presets(config[CONF_CUSTOM_PRESETS]))
     if CONF_CUSTOM_FAN_MODES in config:
         cg.add(var.set_custom_fan_modes(config[CONF_CUSTOM_FAN_MODES]))
+    if CONF_STATIC_PRESSURE in config:
+        static_pressure_var = await number.new_number(
+            config[CONF_STATIC_PRESSURE],
+            min_value=config[CONF_STATIC_PRESSURE][CONF_MIN_VALUE],
+            max_value=config[CONF_STATIC_PRESSURE][CONF_MAX_VALUE],
+            step=1
+        )
+        cg.add(var.set_static_pressure_number(static_pressure_var))
     if CONF_OUTDOOR_TEMPERATURE in config:
         sens = await sensor.new_sensor(config[CONF_OUTDOOR_TEMPERATURE])
         cg.add(var.set_outdoor_temperature_sensor(sens))
