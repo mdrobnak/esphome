@@ -131,7 +131,15 @@ void AirConditioner::setACParams() {
     TXData[7] = FAN_MODE_AUTO;
   }
   // set temp
-  TXData[8] = (int) this->target_temperature;
+  // Data always comes in as C, but user may want it set in F.
+  if (this->use_fahrenheit_) {
+    float tgt_temp = ((9.0 / 5.0) * this->target_temperature + 32.0);
+
+    TXData[8] = (int) tgt_temp + 0x87;  // Offset from actual to engineering value
+  } else {
+    TXData[8] = (int) this->target_temperature;
+  }
+
   // set mode flags
   TXData[11] = ((this->preset == ClimatePreset::CLIMATE_PRESET_BOOST) * MODE_FLAG_AUX_HEAT) |
                ((this->preset == ClimatePreset::CLIMATE_PRESET_SLEEP) * MODE_FLAG_ECO) |
@@ -287,9 +295,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         if (mode != ClimateMode::CLIMATE_MODE_OFF ||
             ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
         {
-          update_property(this->target_temperature, (float) RXData[RX_C0_BYTE_SET_TEMP], need_publish);
           // Don't update the fan mode. Assume it set correctly.
-
           // Show Heating vs Heat at least in Heat mode. Will figure
           // out how to determine if compressor is on in other modes later.
           if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
@@ -347,7 +353,28 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         break;
       }
       case 0xC4:
+        bool need_publish = false;
         set_sensor(this->outdoor_sensor_, CalculateTemp(RXData[21]));
+        if (mode != ClimateMode::CLIMATE_MODE_OFF ||
+            ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
+        {
+          float incoming_target_temp = 0.0;
+          if (this->use_fahrenheit_) {
+            incoming_target_temp = (float) (((RXData[RX_C4_BYTE_SET_TEMP] - 0x87) - 32.0) * 5.0 / 9.0);
+            if (incoming_target_temp != this->target_temperature) {
+              need_publish = true;
+              update_property(this->target_temperature, incoming_target_temp, need_publish);
+            }
+          } else {
+            incoming_target_temp = CalculateTemp(RXData[RX_C4_BYTE_SET_TEMP]);
+            if (incoming_target_temp != this->target_temperature) {
+              need_publish = true;
+              update_property(this->target_temperature, incoming_target_temp, need_publish);
+            }
+          }
+          if (need_publish)
+            this->publish_state();
+        }
 
         if (RXData[9] != 0x30 || RXData[10] != 0x98 || RXData[11] != 0x00 || RXData[12] != 0x00 || RXData[13] != 0x00 ||
             RXData[14] != 0x01 || RXData[15] != 0x20 || RXData[19] != 0xBC || RXData[20] != 0xD6 ||
@@ -363,13 +390,12 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
                    RXData[17], RXData[18], RXData[19], RXData[20], RXData[21], RXData[22], RXData[23], RXData[24],
                    RXData[25], RXData[26], RXData[27], RXData[28], RXData[29], RXData[30], RXData[31]);
         }
+        ForceReadNextCycle = 0;
         break;
     }
   } else {
     ESP_LOGE(Constants::TAG, "Received invalid response from AC");
   }
-
-  ForceReadNextCycle = 0;
 }
 
 uint8_t AirConditioner::CalculateSetTime(uint32_t time) {
@@ -470,6 +496,8 @@ void AirConditioner::dump_config() {
   ESP_LOGCONFIG(Constants::TAG, "MideaXYE:");
   ESP_LOGCONFIG(Constants::TAG, "  [x] Period: %dms", this->get_update_interval());
   ESP_LOGCONFIG(Constants::TAG, "  [x] Response timeout: %dms", this->response_timeout);
+  ESP_LOGCONFIG(Constants::TAG, "  [x] Use Fahrenheit: %d", this->use_fahrenheit_);
+
 #ifdef USE_REMOTE_TRANSMITTER
   ESP_LOGCONFIG(Constants::TAG, "  [x] Using RemoteTransmitter");
 #endif

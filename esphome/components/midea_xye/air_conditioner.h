@@ -173,6 +173,7 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   void set_protect_flags_sensor(Sensor *sensor) { this->protect_flags_sensor_ = sensor; }
   void set_humidity_setpoint_sensor(Sensor *sensor) { this->humidity_sensor_ = sensor; }
   void set_power_sensor(Sensor *sensor) { this->power_sensor_ = sensor; }
+  void set_use_fahrenheit(bool yesno) { this->use_fahrenheit_ = yesno; }
   void update() override;
   void prepareTXData(uint8_t command);
   void setup() override;
@@ -221,6 +222,7 @@ class AirConditioner : public PollingComponent, public climate::Climate {
   std::set<ClimatePreset> supported_presets_{};
   std::set<std::string> supported_custom_presets_{};
   std::set<std::string> supported_custom_fan_modes_{};
+  bool use_fahrenheit_;
   Sensor *outdoor_sensor_{nullptr};
   Sensor *temperature_2a_sensor_{nullptr};
   Sensor *temperature_2b_sensor_{nullptr};
