@@ -28,7 +28,7 @@ void AirConditioner::control(const ClimateCall &call) {
     followMeInit = false;
   }
   if (call.get_target_temperature().has_value())
-    this->target_temperature = (int) call.get_target_temperature().value();
+    this->target_temperature = call.get_target_temperature().value();
   if (call.get_fan_mode().has_value())
     this->fan_mode = call.get_fan_mode().value();
   if (call.get_swing_mode().has_value())
@@ -131,7 +131,7 @@ void AirConditioner::setACParams() {
     TXData[7] = FAN_MODE_AUTO;
   }
   // set temp
-  TXData[8] = this->target_temperature;
+  TXData[8] = (int) this->target_temperature;
   // set mode flags
   TXData[11] = ((this->preset == ClimatePreset::CLIMATE_PRESET_BOOST) * MODE_FLAG_AUX_HEAT) |
                ((this->preset == ClimatePreset::CLIMATE_PRESET_SLEEP) * MODE_FLAG_ECO) |
