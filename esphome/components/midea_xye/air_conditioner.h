@@ -116,6 +116,10 @@
 #define RX_C0_BYTE_UNKNOWN5 28
 #define RX_C0_BYTE_UNKNOWN6 29
 
+// C4 Specific
+#define RX_C4_BYTE_SET_TEMP 18
+#define RX_C4_BYTE_OUTDOOR_SENSOR 21
+
 // TODO: Don't hardcode this
 #define SERVER_ID 0
 #define CLIENT_ID 0
