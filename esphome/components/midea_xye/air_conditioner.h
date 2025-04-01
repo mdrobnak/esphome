@@ -182,6 +182,7 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   void set_protect_flags_sensor(Sensor *sensor) { this->protect_flags_sensor_ = sensor; }
   void set_humidity_setpoint_sensor(Sensor *sensor) { this->humidity_sensor_ = sensor; }
   void set_power_sensor(Sensor *sensor) { this->power_sensor_ = sensor; }
+  void set_custom_auto(bool yesno) { this->custom_auto_ = yesno; }
   void set_use_fahrenheit(bool yesno) { this->use_fahrenheit_ = yesno; }
   void set_static_pressure_number(StaticPressureNumber *number) {
     this->static_pressure_number_ = number;
@@ -237,6 +238,7 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   std::set<ClimatePreset> supported_presets_{};
   std::set<std::string> supported_custom_presets_{};
   std::set<std::string> supported_custom_fan_modes_{};
+  bool custom_auto_;
   bool use_fahrenheit_;
   Sensor *outdoor_sensor_{nullptr};
   Sensor *temperature_2a_sensor_{nullptr};
@@ -251,6 +253,7 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   Sensor *power_sensor_{nullptr};
   StaticPressureNumber *static_pressure_number_{nullptr};
   ClimateMode last_on_mode_;
+  ClimateMode auto_mode_target_;
 
   static uint8_t CalculateCRC(uint8_t *Data, uint8_t len);
   void ParseResponse(uint8_t cmdSent);

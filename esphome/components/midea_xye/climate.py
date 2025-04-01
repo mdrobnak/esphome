@@ -134,6 +134,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_PERIOD, default="1s"): cv.time_period,
             cv.Optional(CONF_TIMEOUT, default="100ms"): cv.time_period,
             cv.Optional(CONF_USE_FAHRENHEIT, default=False): cv.boolean,
+            cv.Optional("custom_auto", default=False): cv.boolean,
             cv.OnlyWith(CONF_TRANSMITTER_ID, "remote_transmitter"): cv.use_id(
                 remote_transmitter.RemoteTransmitterComponent
             ),
@@ -353,6 +354,7 @@ async def to_code(config):
     cg.add(var.set_period(config[CONF_PERIOD].total_milliseconds))
     cg.add(var.set_response_timeout(config[CONF_TIMEOUT].total_milliseconds))
     cg.add(var.set_use_fahrenheit(config[CONF_USE_FAHRENHEIT]))
+    cg.add(var.set_custom_auto(config["custom_auto"]))
     if CONF_TRANSMITTER_ID in config:
         cg.add_define("USE_REMOTE_TRANSMITTER")
         transmitter_ = await cg.get_variable(config[CONF_TRANSMITTER_ID])

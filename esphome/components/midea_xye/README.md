@@ -37,11 +37,20 @@ uart:
 
 
 # Main settings
+# custom_auto parameter below bypasses the internal logic in
+# the AC to allow you to set more reasonable deadband settings
+# than the factory. This exposes a high and low temperature value
+# which can be set, instead of a single value.
+# For the AHU the default is -5.5 Degrees F on the lower threshold,
+# and 4 Degrees F on the upper threshold, each in relation to the
+# value set in the temperature card in HA.
+
 climate:
   - platform: midea_xye
     name: Heatpump
     period: 1s                  # Optional. Defaults to 1s
     timeout: 100ms              # Optional. Defaults to 100ms
+    custom_auto: true           # Optional. Defaults to false. See above.
     fahrenheit: false           # Optional. Defaults to false.
     #beeper: true               # Optional. Beep on commands.
     visual:                     # Optional. Example of visual settings override.
