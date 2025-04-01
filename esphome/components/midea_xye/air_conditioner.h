@@ -257,6 +257,7 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
 
   static uint8_t CalculateCRC(uint8_t *Data, uint8_t len);
   void ParseResponse(uint8_t cmdSent);
+  void calc_auto_state();
   uint8_t CalculateSetTime(uint32_t time);
   uint32_t CalculateGetTime(uint8_t time);
   static float CalculateTemp(uint8_t byte);

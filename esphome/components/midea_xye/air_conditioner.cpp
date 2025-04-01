@@ -32,8 +32,18 @@ void AirConditioner::control(const ClimateCall &call) {
     this->mode = call.get_mode().value();
     followMeInit = false;
   }
-  if (call.get_target_temperature().has_value())
-    this->target_temperature = call.get_target_temperature().value();
+  if (this->custom_auto_) {
+    if (call.get_target_temperature_high().has_value())
+      this->target_temperature_high = call.get_target_temperature_high().value();
+
+    if (call.get_target_temperature_low().has_value())
+      this->target_temperature_low = call.get_target_temperature_low().value();
+    // Recompute target mode based upon temperature values.
+    calc_auto_state();
+  } else {
+    if (call.get_target_temperature().has_value())
+      this->target_temperature = call.get_target_temperature().value();
+  }
   if (call.get_fan_mode().has_value())
     this->fan_mode = call.get_fan_mode().value();
   if (call.get_swing_mode().has_value())
@@ -97,8 +107,15 @@ void AirConditioner::setACParams() {
   // construct set command
   prepareTXData(CLIENT_COMMAND_SET);
 
+  // Handle Custom Auto
+  ClimateMode desiredMode;
+  if (this->custom_auto_) {
+    desiredMode = this->auto_mode_target_;
+  } else {
+    desiredMode = this->mode;
+  }
   // set mode
-  switch (this->mode) {
+  switch (desiredMode) {
     case ClimateMode::CLIMATE_MODE_OFF:
       TXData[6] = OP_MODE_OFF;
       break;
@@ -143,14 +160,21 @@ void AirConditioner::setACParams() {
     this->fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
     TXData[7] = FAN_MODE_AUTO;
   }
+
   // set temp
+  // Handle Custom Auto
+  float tempToUse = 0.0;
+  if (desiredMode == ClimateMode::CLIMATE_MODE_HEAT) {
+    (this->custom_auto_) ? tempToUse = this->target_temperature_low : this->target_temperature;
+  } else {
+    (this->custom_auto_) ? tempToUse = this->target_temperature_high : this->target_temperature;
+  }
   // Data always comes in as C, but user may want it set in F.
   if (this->use_fahrenheit_) {
-    float tgt_temp = ((9.0 / 5.0) * this->target_temperature + 32.0);
-
+    float tgt_temp = ((9.0 / 5.0) * tempToUse + 32.0);
     TXData[8] = (int) tgt_temp + 0x87;  // Offset from actual to engineering value
   } else {
-    TXData[8] = (int) this->target_temperature;
+    TXData[8] = (int) tempToUse;
   }
 
   // set mode flags
@@ -210,6 +234,30 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
       ESP_LOGE(Constants::TAG, "Received incorrect message length from AC for Command %02X", cmdSent);
     }
   });
+}
+
+void AirConditioner::calc_auto_state() {
+  const bool too_cold = this->current_temperature < this->target_temperature_low;
+  const bool too_hot = this->current_temperature > this->target_temperature_high;
+
+  // climate::ClimateAction target_action;
+  if (too_cold) {
+    // too cold -> enable heating if possible and enabled, else idle
+    // target_action = climate::CLIMATE_ACTION_HEATING;
+    this->auto_mode_target_ = ClimateMode::CLIMATE_MODE_HEAT;
+  } else if (too_hot) {
+    // too hot -> enable cooling if possible and enabled, else idle
+    // target_action = climate::CLIMATE_ACTION_COOLING;
+    this->auto_mode_target_ = ClimateMode::CLIMATE_MODE_COOL;
+  } else {
+    // neither too hot nor too cold -> in range
+    if (this->mode == climate::CLIMATE_MODE_HEAT_COOL) {
+      // if supports both ends and both cooling and heating enabled, go to idle
+      // action target_action = climate::CLIMATE_ACTION_IDLE;
+      this->auto_mode_target_ = ClimateMode::CLIMATE_MODE_FAN_ONLY;
+    }
+  }
+  // this->switch_to_action_(target_action);
 }
 
 void AirConditioner::update() {
@@ -309,6 +357,8 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         if (mode != ClimateMode::CLIMATE_MODE_OFF &&
             ((RXData[RX_C0_BYTE_OP_MODE] & OP_MODE_AUTO_FLAG) == OP_MODE_AUTO_FLAG)) {
           mode = ClimateMode::CLIMATE_MODE_HEAT_COOL;
+        } else if ((this->mode == ClimateMode::CLIMATE_MODE_HEAT_COOL) && (this->custom_auto_)) {
+          mode = ClimateMode::CLIMATE_MODE_HEAT_COOL;
         }
 
         uint8_t current_fan_speed = RXData[RX_C0_BYTE_FAN_MODE] & 0x0F;
@@ -359,6 +409,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             need_publish = true;
           }
 
+          // Set action for auto - this seems to work reasonably well.
           if ((this->mode == climate::CLIMATE_MODE_HEAT_COOL) &&
               ((RXData[RX_C0_BYTE_OP_MODE] & 0xEF) == OP_MODE_COOL) &&
               (this->action != climate::CLIMATE_ACTION_COOLING)) {
@@ -374,6 +425,23 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
                      (this->action != climate::CLIMATE_ACTION_HEATING)) {
             this->action = climate::CLIMATE_ACTION_HEATING;
             need_publish = true;
+          }
+
+          // This will only handle heating for custom auto right now.
+          if (this->custom_auto_) {
+            if ((this->auto_mode_target_ == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
+              this->action = climate::CLIMATE_ACTION_HEATING;
+              need_publish = true;
+            } else if ((this->auto_mode_target_ == climate::CLIMATE_MODE_COOL) && (RXData[9] & 0x0F) != 0x00) {
+              this->action = climate::CLIMATE_ACTION_COOLING;
+              need_publish = true;
+            } else if ((this->auto_mode_target_ == climate::CLIMATE_MODE_FAN_ONLY) && (RXData[9] & 0x0F) != 0x00) {
+              this->action = climate::CLIMATE_ACTION_FAN;
+              need_publish = true;
+            } else if ((this->action != climate::CLIMATE_ACTION_IDLE) && (RXData[9] & 0x0F) == 0x00) {
+              this->action = climate::CLIMATE_ACTION_IDLE;
+              need_publish = true;
+            }
           }
 
           if ((this->swing_mode != ClimateSwingMode::CLIMATE_SWING_OFF) !=
@@ -522,6 +590,8 @@ ClimateTraits AirConditioner::traits() {
   traits.set_visual_min_temperature(17);
   traits.set_visual_max_temperature(30);
   traits.set_visual_temperature_step(1.0);
+  if (this->custom_auto_)
+    traits.set_supports_two_point_target_temperature(true);
   traits.set_supported_modes(this->supported_modes_);
   traits.set_supported_swing_modes(this->supported_swing_modes_);
   traits.set_supported_presets(this->supported_presets_);
@@ -550,6 +620,7 @@ void AirConditioner::dump_config() {
   ESP_LOGCONFIG(Constants::TAG, "MideaXYE:");
   ESP_LOGCONFIG(Constants::TAG, "  [x] Period: %dms", this->get_update_interval());
   ESP_LOGCONFIG(Constants::TAG, "  [x] Response timeout: %dms", this->response_timeout);
+  ESP_LOGCONFIG(Constants::TAG, "  [x] Use Custom Auto: %d", this->custom_auto_);
   ESP_LOGCONFIG(Constants::TAG, "  [x] Use Fahrenheit: %d", this->use_fahrenheit_);
 
 #ifdef USE_REMOTE_TRANSMITTER
