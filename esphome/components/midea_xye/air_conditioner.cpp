@@ -34,10 +34,10 @@ void AirConditioner::control(const ClimateCall &call) {
   }
   if (this->custom_auto_) {
     if (call.get_target_temperature_high().has_value())
-      this->target_temperature_high = call.get_target_temperature_high().value();
+      this->target_temperature_high = *call.get_target_temperature_high();
 
     if (call.get_target_temperature_low().has_value())
-      this->target_temperature_low = call.get_target_temperature_low().value();
+      this->target_temperature_low = *call.get_target_temperature_low();
     // Recompute target mode based upon temperature values.
     calc_auto_state();
   } else {
