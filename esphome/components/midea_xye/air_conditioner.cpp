@@ -337,7 +337,6 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
 
         bool need_publish = false;
 
-        update_property(this->current_temperature, CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
         update_property(this->mode, mode, need_publish);
         if (mode != ClimateMode::CLIMATE_MODE_OFF)  // Don't update below states
                                                     // unless mode is an ON state
@@ -351,6 +350,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           // Don't update the fan mode. Assume it set correctly.
           // Show Heating vs Heat at least in Heat mode. Will figure
           // out how to determine if compressor is on in other modes later.
+          update_property(this->current_temperature, CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
           if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
             this->action = climate::CLIMATE_ACTION_HEATING;
             need_publish = true;
