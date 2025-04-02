@@ -131,6 +131,8 @@ CONFIG_SCHEMA = cv.All(
     climate.CLIMATE_SCHEMA.extend(
         {
             cv.GenerateID(): cv.declare_id(AirConditioner),
+            cv.Optional(CONF_DEFAULT_TARGET_TEMPERATURE_HIGH): cv.temperature,
+            cv.Optional(CONF_DEFAULT_TARGET_TEMPERATURE_LOW): cv.temperature,
             cv.Optional(CONF_PERIOD, default="1s"): cv.time_period,
             cv.Optional(CONF_TIMEOUT, default="100ms"): cv.time_period,
             cv.Optional(CONF_USE_FAHRENHEIT, default=False): cv.boolean,
