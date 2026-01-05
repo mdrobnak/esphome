@@ -128,7 +128,7 @@ validate_custom_fan_modes = cv.enum(CUSTOM_FAN_MODES, upper=True)
 validate_custom_presets = cv.enum(CUSTOM_PRESETS, upper=True)
 
 CONFIG_SCHEMA = cv.All(
-    climate.CLIMATE_SCHEMA.extend(
+    climate.climate_schema(AirConditioner).extend(
         {
             cv.GenerateID(): cv.declare_id(AirConditioner),
             cv.Optional(CONF_PERIOD, default="1s"): cv.time_period,
@@ -148,7 +148,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_CUSTOM_FAN_MODES): cv.ensure_list(
                 validate_custom_fan_modes
             ),
-            cv.Optional(CONF_STATIC_PRESSURE): number.NUMBER_SCHEMA.extend({
+            cv.Optional(CONF_STATIC_PRESSURE): number.number_schema(StaticPressureNumber).extend({
                 cv.GenerateID(): cv.declare_id(StaticPressureNumber),
                 cv.Optional(CONF_MIN_VALUE, default=0): cv.float_,
                 cv.Optional(CONF_MAX_VALUE, default=15): cv.float_,
@@ -346,7 +346,7 @@ async def power_inv_to_code(var, config, args):
 
 
 async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_ID])
+    var = await climate.new_climate(config)
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
     await climate.register_climate(var, config)
@@ -408,4 +408,3 @@ async def to_code(config):
     if CONF_HUMIDITY_SETPOINT in config:
         sens = await sensor.new_sensor(config[CONF_HUMIDITY_SETPOINT])
         cg.add(var.set_humidity_setpoint_sensor(sens))
-    #cg.add_library("dudanov/MideaUART", "1.1.8")

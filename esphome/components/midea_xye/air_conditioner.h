@@ -144,12 +144,14 @@ using climate::ClimateFanMode;
 using climate::ClimateMode;
 using climate::ClimatePreset;
 using climate::ClimateSwingMode;
-using climate::ClimateTraits;
 using sensor::Sensor;
 
 class Constants {
  public:
   static const char *const TAG;
+  static const char *const FREEZE_PROTECTION;
+  static const char *const SILENT;
+  static const char *const TURBO;
 };
 
 class AirConditioner : public PollingComponent, public climate::Climate, public StaticPressureInterface {
@@ -208,11 +210,11 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   void do_power_off() { this->setPowerState(false); }
   void do_power_toggle() { this->setPowerState(this->mode == ClimateMode::CLIMATE_MODE_OFF); }
 
-  void set_supported_modes(const std::set<ClimateMode> &modes) { this->supported_modes_ = modes; }
-  void set_supported_swing_modes(const std::set<ClimateSwingMode> &modes) { this->supported_swing_modes_ = modes; }
-  void set_supported_presets(const std::set<ClimatePreset> &presets) { this->supported_presets_ = presets; }
-  void set_custom_presets(const std::set<std::string> &presets) { this->supported_custom_presets_ = presets; }
-  void set_custom_fan_modes(const std::set<std::string> &modes) { this->supported_custom_fan_modes_ = modes; }
+  void set_supported_modes(climate::ClimateModeMask modes) { this->supported_modes_ = modes; }
+  void set_supported_swing_modes(climate::ClimateSwingModeMask modes) { this->supported_swing_modes_ = modes; }
+  void set_supported_presets(climate::ClimatePresetMask presets) { this->supported_presets_ = presets; }
+  void set_custom_presets(std::vector<const char *> presets) { this->supported_custom_presets_ = presets; }
+  void set_custom_fan_modes(std::vector<const char *> modes) { this->supported_custom_fan_modes_ = modes; }
 
   uint8_t TXData[TX_LEN];
   uint8_t RXData[RX_LEN];
@@ -231,12 +233,12 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   IrTransmitter transmitter_;
 #endif
   void control(const ClimateCall &call) override;
-  ClimateTraits traits() override;
-  std::set<ClimateMode> supported_modes_{};
-  std::set<ClimateSwingMode> supported_swing_modes_{};
-  std::set<ClimatePreset> supported_presets_{};
-  std::set<std::string> supported_custom_presets_{};
-  std::set<std::string> supported_custom_fan_modes_{};
+  climate::ClimateTraits traits() override;
+  climate::ClimateModeMask supported_modes_{};
+  climate::ClimateSwingModeMask supported_swing_modes_{};
+  climate::ClimatePresetMask supported_presets_{};
+  std::vector<const char *> supported_custom_presets_{};
+  std::vector<const char *> supported_custom_fan_modes_{};
   bool use_fahrenheit_;
   Sensor *outdoor_sensor_{nullptr};
   Sensor *temperature_2a_sensor_{nullptr};

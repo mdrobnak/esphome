@@ -9,6 +9,9 @@ namespace midea {
 namespace ac {
 
 const char *const Constants::TAG = "midea_xye";
+const char *const Constants::FREEZE_PROTECTION = "Freeze Protection";
+const char *const Constants::SILENT = "Silent";
+const char *const Constants::TURBO = "Turbo";
 
 static void set_sensor(Sensor *sensor, float value) {
   if (sensor != nullptr && (!sensor->has_state() || sensor->get_raw_state() != value))
@@ -516,8 +519,8 @@ uint32_t AirConditioner::CalculateGetTime(uint8_t time) {
 
 float AirConditioner::CalculateTemp(uint8_t byte) { return (byte - 0x28) / 2.0; }
 
-ClimateTraits AirConditioner::traits() {
-  auto traits = ClimateTraits();
+climate::ClimateTraits AirConditioner::traits() {
+  auto traits = climate::ClimateTraits();
   traits.set_supports_current_temperature(true);
   traits.set_visual_min_temperature(17);
   traits.set_visual_max_temperature(30);
