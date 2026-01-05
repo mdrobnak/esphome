@@ -234,14 +234,12 @@ void AirConditioner::update() {
       // If the AC mode changed, follow-me should be
       // refreshed, if emulating the wired controller's
       // behavior.
-      if (!followMeInit) {
-        cmdSent = 0xC6;
-        prepareTXData(cmdSent);
-        TXData[10] = 6;
-        TXData[11] = lastFollowMeTemperature;
-        TXData[14] = CalculateCRC(TXData, TX_LEN);
-        sendRecv(cmdSent);
-        followMeInit = true;
+      cmdSent = 0xC6;
+      sendRecv(cmdSent);
+      if (this->mode == ClimateMode::CLIMATE_MODE_OFF) {
+        ESP_LOGI(Constants::TAG, "Set static pressure.");
+      } else {
+        ESP_LOGI(Constants::TAG, "Sent Follow-Me data.");
       }
       break;
     }
@@ -581,8 +579,12 @@ void AirConditioner::do_follow_me(float temperature, bool beeper) {
   // Only send if mode is something other than off.
   // Wired controller does not send 0xC6 when off.
   if (this->mode != ClimateMode::CLIMATE_MODE_OFF) {
-    sendRecv(0xC6);
-    ESP_LOGI(Constants::TAG, "Sent Follow-Me data.");
+    if (controlState != STATE_WAIT_DATA) {
+      controlState = STATE_SEND_C6;
+    } else {
+      queuedCommand = STATE_SEND_C6;
+    }
+    ESP_LOGI(Constants::TAG, "Queued Follow-Me data.");
   }
 #endif
 }
@@ -600,8 +602,12 @@ void AirConditioner::set_static_pressure(uint8_t static_pressure) {
   TXData[14] = CalculateCRC(TXData, TX_LEN);
 
   if (this->mode == ClimateMode::CLIMATE_MODE_OFF) {
-    sendRecv(0xC6);
-    ESP_LOGI(Constants::TAG, "Set static pressure to %d", static_pressure);
+    if (controlState != STATE_WAIT_DATA) {
+      controlState = STATE_SEND_C6;
+    } else {
+      queuedCommand = STATE_SEND_C6;
+    }
+    ESP_LOGI(Constants::TAG, "Queued setting static pressure to %d", static_pressure);
   } else {
     ESP_LOGW(Constants::TAG, "Cannot set static pressure while unit is running");
   }
