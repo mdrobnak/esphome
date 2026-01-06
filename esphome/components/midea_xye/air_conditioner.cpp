@@ -519,7 +519,8 @@ float AirConditioner::CalculateTemp(uint8_t byte) { return (byte - 0x28) / 2.0; 
 
 climate::ClimateTraits AirConditioner::traits() {
   auto traits = climate::ClimateTraits();
-  traits.set_supports_current_temperature(true);
+  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
+  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_ACTION);
   traits.set_visual_min_temperature(17);
   traits.set_visual_max_temperature(30);
   traits.set_visual_temperature_step(1.0);
@@ -541,8 +542,6 @@ climate::ClimateTraits AirConditioner::traits() {
     traits.add_supported_swing_mode(ClimateSwingMode::CLIMATE_SWING_OFF);
   if (!traits.get_supported_presets().empty())
     traits.add_supported_preset(ClimatePreset::CLIMATE_PRESET_NONE);
-
-  traits.set_supports_action(true);
 
   return traits;
 }
