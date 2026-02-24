@@ -68,7 +68,11 @@ void AirConditioner::control(const ClimateCall &call) {
 
 void AirConditioner::setup() {
   // this->uart_->check_uart_settings(4800, 1, UART_CONFIG_PARITY_NONE, 8);
-  this->last_on_mode_ = *this->supported_modes_.begin();
+  if (!this->supported_modes_.empty()) {
+    this->last_on_mode_ = *this->supported_modes_.begin();
+  } else {
+    this->last_on_mode_ = ClimateMode::CLIMATE_MODE_COOL;
+  }
   controlState = STATE_SEND_C0;
   ForceReadNextCycle = 1;
   followMeInit = false;
@@ -231,6 +235,7 @@ void AirConditioner::sendRecv(uint8_t cmdSent) {
       }
     } else {
       ESP_LOGE(Constants::TAG, "Received incorrect message length from AC for Command %02X", cmdSent);
+      controlState = STATE_SEND_C0;
     }
   });
 }
@@ -359,9 +364,12 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         bool need_publish = false;
 
         update_property(this->mode, mode, need_publish);
-        if (mode != ClimateMode::CLIMATE_MODE_OFF)  // Don't update below states
-                                                    // unless mode is an ON state
-        {
+        if (mode == ClimateMode::CLIMATE_MODE_OFF) {
+          if (this->action != climate::CLIMATE_ACTION_OFF) {
+            this->action = climate::CLIMATE_ACTION_OFF;
+            need_publish = true;
+          }
+        } else {
           this->last_on_mode_ = mode;
         }
 
@@ -371,6 +379,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           // Don't update the fan mode. Assume it set correctly.
           // Show Heating vs Heat at least in Heat mode. Will figure
           // out how to determine if compressor is on in other modes later.
+          // Cursor filled out the rest of the modes, but this is still a hack.
 
           // If we are using C, update the temperature here. Mask out 0x40. If we are using F, update
           // via 0xC4.
@@ -380,6 +389,15 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           update_property(this->current_temperature, CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
           if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
             this->action = climate::CLIMATE_ACTION_HEATING;
+            need_publish = true;
+          } else if ((this->mode == climate::CLIMATE_MODE_COOL) && (RXData[9] & 0x0F) != 0x00) {
+            this->action = climate::CLIMATE_ACTION_COOLING;
+            need_publish = true;
+          } else if ((this->mode == climate::CLIMATE_MODE_DRY) && (RXData[9] & 0x0F) != 0x00) {
+            this->action = climate::CLIMATE_ACTION_DRYING;
+            need_publish = true;
+          } else if ((this->mode == climate::CLIMATE_MODE_FAN_ONLY) && (RXData[9] & 0x0F) != 0x00) {
+            this->action = climate::CLIMATE_ACTION_FAN;
             need_publish = true;
           } else if ((this->action != climate::CLIMATE_ACTION_IDLE) && (RXData[9] & 0x0F) == 0x00) {
             this->action = climate::CLIMATE_ACTION_IDLE;
@@ -412,8 +430,8 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           if (this->preset != preset)
             need_publish = true;
           this->preset = preset;
-        } else if ((this->action != climate::CLIMATE_ACTION_IDLE) && (RXData[9] & 0x0F) == 0x00) {
-          this->action = climate::CLIMATE_ACTION_IDLE;
+        } else if (mode == ClimateMode::CLIMATE_MODE_OFF && (this->action != climate::CLIMATE_ACTION_OFF)) {
+          this->action = climate::CLIMATE_ACTION_OFF;
           need_publish = true;
         }
 
@@ -459,7 +477,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         bool need_publish = false;
         set_sensor(this->outdoor_sensor_, CalculateTemp(RXData[21]));
         set_number(this->static_pressure_number_, 0x0F & RXData[24]);
-        if (mode != ClimateMode::CLIMATE_MODE_OFF ||
+        if (this->mode != ClimateMode::CLIMATE_MODE_OFF ||
             ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
         {
           if (this->use_fahrenheit_) {
@@ -485,6 +503,8 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
                    RXData[17], RXData[18], RXData[19], RXData[20], RXData[21], RXData[22], RXData[23], RXData[24],
                    RXData[25], RXData[26], RXData[27], RXData[28], RXData[29], RXData[30], RXData[31]);
         }
+        if (need_publish)
+          this->publish_state();
         ForceReadNextCycle = 0;
         break;
     }
