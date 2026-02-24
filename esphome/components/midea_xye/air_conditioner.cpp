@@ -352,7 +352,10 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           // Show Heating vs Heat at least in Heat mode. Will figure
           // out how to determine if compressor is on in other modes later.
           // Temperature is & with 0xBF to mask out 0x40.
-          update_property(this->target_temperature, (float) (RXData[RX_C0_BYTE_SET_TEMP] & 0xBF), need_publish);
+          // Don't update target temperature if we're in the middle of updating it...
+          if (this->queuedCommand != STATE_SEND_C3) {
+            update_property(this->target_temperature, (float) (RXData[RX_C0_BYTE_SET_TEMP] & 0xBF), need_publish);
+          }
           update_property(this->current_temperature, CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
           if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
             this->action = climate::CLIMATE_ACTION_HEATING;
