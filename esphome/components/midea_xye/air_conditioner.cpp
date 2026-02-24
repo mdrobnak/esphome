@@ -414,21 +414,23 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
         {
           float incoming_target_temp = 0.0;
-          if (this->use_fahrenheit_) {
-            incoming_target_temp = (float) (((RXData[RX_C4_BYTE_SET_TEMP] - 0x87) - 32.0) * 5.0 / 9.0);
-            if (incoming_target_temp != this->target_temperature) {
-              need_publish = true;
-              update_property(this->target_temperature, incoming_target_temp, need_publish);
+          if (this->queuedCommand != STATE_SEND_C3) {
+            if (this->use_fahrenheit_) {
+              incoming_target_temp = (float) (((RXData[RX_C4_BYTE_SET_TEMP] - 0x87) - 32.0) * 5.0 / 9.0);
+              if (incoming_target_temp != this->target_temperature) {
+                need_publish = true;
+                update_property(this->target_temperature, incoming_target_temp, need_publish);
+              }
+            } else {
+              incoming_target_temp = CalculateTemp(RXData[RX_C4_BYTE_SET_TEMP]);
+              if (incoming_target_temp != this->target_temperature) {
+                need_publish = true;
+                update_property(this->target_temperature, incoming_target_temp, need_publish);
+              }
             }
-          } else {
-            incoming_target_temp = CalculateTemp(RXData[RX_C4_BYTE_SET_TEMP]);
-            if (incoming_target_temp != this->target_temperature) {
-              need_publish = true;
-              update_property(this->target_temperature, incoming_target_temp, need_publish);
-            }
+            if (need_publish)
+              this->publish_state();
           }
-          if (need_publish)
-            this->publish_state();
         }
 
         if (RXData[9] != 0x30 || RXData[10] != 0x98 || RXData[11] != 0x00 || RXData[12] != 0x00 || RXData[13] != 0x00 ||
