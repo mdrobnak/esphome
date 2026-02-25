@@ -383,7 +383,9 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
 
           // If we are using C, update the temperature here. Mask out 0x40. If we are using F, update
           // via 0xC4.
-          if (!this->use_fahrenheit_) {
+          // In either case, don't update it if the user is the in middle of setting it to something new...
+          //
+          if ((!this->use_fahrenheit_) && (this->queuedCommand != STATE_SEND_C3)) {
             update_property(this->target_temperature, (float) (RXData[RX_C0_BYTE_SET_TEMP] & 0xBF), need_publish);
           }
           update_property(this->current_temperature, CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
@@ -480,7 +482,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         if (this->mode != ClimateMode::CLIMATE_MODE_OFF ||
             ForceReadNextCycle == 1)  // Don't update below states unless mode is an ON state
         {
-          if (this->use_fahrenheit_) {
+          if ((this->use_fahrenheit_) && (this->queuedCommand != STATE_SEND_C3)) {
             float incoming_target_temp = 0.0;
             incoming_target_temp = (float) (((RXData[RX_C4_BYTE_SET_TEMP] - 0x87) - 32.0) * 5.0 / 9.0);
             if (incoming_target_temp != this->target_temperature) {
