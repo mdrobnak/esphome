@@ -389,7 +389,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             update_property(this->target_temperature, (float) (RXData[RX_C0_BYTE_SET_TEMP] & 0xBF), need_publish);
           }
           update_property(this->current_temperature, CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
-          if ((this->current_temperature - CalculateTemp(RXData[RX_C0_BYTE_T2A_TEMP])) > 5.0) {
+          if (fabs(this->current_temperature - CalculateTemp(RXData[RX_C0_BYTE_T2A_TEMP])) > 5.0) {
             // Compressor running
             if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
               this->action = climate::CLIMATE_ACTION_HEATING;
