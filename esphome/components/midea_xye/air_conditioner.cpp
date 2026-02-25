@@ -389,23 +389,31 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             update_property(this->target_temperature, (float) (RXData[RX_C0_BYTE_SET_TEMP] & 0xBF), need_publish);
           }
           update_property(this->current_temperature, CalculateTemp(RXData[RX_C0_BYTE_T1_TEMP]), need_publish);
-          if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
-            this->action = climate::CLIMATE_ACTION_HEATING;
-            need_publish = true;
-          } else if ((this->mode == climate::CLIMATE_MODE_COOL) && (RXData[9] & 0x0F) != 0x00) {
-            this->action = climate::CLIMATE_ACTION_COOLING;
-            need_publish = true;
-          } else if ((this->mode == climate::CLIMATE_MODE_DRY) && (RXData[9] & 0x0F) != 0x00) {
-            this->action = climate::CLIMATE_ACTION_DRYING;
-            need_publish = true;
-          } else if ((this->mode == climate::CLIMATE_MODE_FAN_ONLY) && (RXData[9] & 0x0F) != 0x00) {
-            this->action = climate::CLIMATE_ACTION_FAN;
-            need_publish = true;
-          } else if ((this->action != climate::CLIMATE_ACTION_IDLE) && (RXData[9] & 0x0F) == 0x00) {
-            this->action = climate::CLIMATE_ACTION_IDLE;
-            need_publish = true;
+          if ((this->current_temperature - CalculateTemp(RXData[RX_C0_BYTE_T2A_TEMP])) > 5.0) {
+            // Compressor running
+            if ((this->mode == climate::CLIMATE_MODE_HEAT) && (RXData[9] & 0x0F) != 0x00) {
+              this->action = climate::CLIMATE_ACTION_HEATING;
+              need_publish = true;
+            } else if ((this->mode == climate::CLIMATE_MODE_COOL) && (RXData[9] & 0x0F) != 0x00) {
+              this->action = climate::CLIMATE_ACTION_COOLING;
+              need_publish = true;
+            } else if ((this->mode == climate::CLIMATE_MODE_DRY) && (RXData[9] & 0x0F) != 0x00) {
+              this->action = climate::CLIMATE_ACTION_DRYING;
+              need_publish = true;
+            }
+          } else {
+            if ((RXData[9] & 0x0F) != 0x00) {
+              // This can be the case when in Fan only mode, or when release cold air is on in heat
+              // Or anytime with cool...
+              this->action = climate::CLIMATE_ACTION_FAN;
+              need_publish = true;
+            } else if ((this->action != climate::CLIMATE_ACTION_IDLE) && (RXData[9] & 0x0F) == 0x00) {
+              this->action = climate::CLIMATE_ACTION_IDLE;
+              need_publish = true;
+            }
           }
 
+          // Auto modes - FIXME needs more work.
           if ((this->mode == climate::CLIMATE_MODE_HEAT_COOL) &&
               ((RXData[RX_C0_BYTE_OP_MODE] & 0xEF) == OP_MODE_COOL) &&
               (this->action != climate::CLIMATE_ACTION_COOLING)) {
@@ -491,7 +499,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
             }
           }
         }
-	// Field 15 goes from 0x01 to 0x00 when Follow-Me data is processed / procecessing.
+        // Field 15 goes from 0x01 to 0x00 when Follow-Me data is processed / procecessing.
         if (need_publish)
           this->publish_state();
         ForceReadNextCycle = 0;
