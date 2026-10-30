@@ -364,12 +364,7 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
         bool need_publish = false;
 
         update_property(this->mode, mode, need_publish);
-        if (mode == ClimateMode::CLIMATE_MODE_OFF) {
-          if (this->action != climate::CLIMATE_ACTION_OFF) {
-            this->action = climate::CLIMATE_ACTION_OFF;
-            need_publish = true;
-          }
-        } else {
+        if (mode != ClimateMode::CLIMATE_MODE_OFF) {
           this->last_on_mode_ = mode;
         }
 
@@ -440,7 +435,11 @@ void AirConditioner::ParseResponse(uint8_t cmdSent) {
           if (this->preset != preset)
             need_publish = true;
           this->preset = preset;
-        } else if (mode == ClimateMode::CLIMATE_MODE_OFF && (this->action != climate::CLIMATE_ACTION_OFF)) {
+        }
+
+        // A forced read may update the action above even while the unit is off.
+        // Always give the reported power state precedence before publishing.
+        if (mode == ClimateMode::CLIMATE_MODE_OFF && (this->action != climate::CLIMATE_ACTION_OFF)) {
           this->action = climate::CLIMATE_ACTION_OFF;
           need_publish = true;
         }
