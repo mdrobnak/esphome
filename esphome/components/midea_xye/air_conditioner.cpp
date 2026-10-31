@@ -584,8 +584,6 @@ climate::ClimateTraits AirConditioner::traits() {
   traits.set_supported_modes(this->supported_modes_);
   traits.set_supported_swing_modes(this->supported_swing_modes_);
   traits.set_supported_presets(this->supported_presets_);
-  traits.set_supported_custom_presets(this->supported_custom_presets_);
-  traits.set_supported_custom_fan_modes(this->supported_custom_fan_modes_);
   /* + MINIMAL SET OF CAPABILITIES */
   traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_AUTO);
   traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
