@@ -231,8 +231,8 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   void set_supported_modes(climate::ClimateModeMask modes) { this->supported_modes_ = modes; }
   void set_supported_swing_modes(climate::ClimateSwingModeMask modes) { this->supported_swing_modes_ = modes; }
   void set_supported_presets(climate::ClimatePresetMask presets) { this->supported_presets_ = presets; }
-  void set_custom_presets(std::vector<const char *> presets) { this->supported_custom_presets_ = presets; }
-  void set_custom_fan_modes(std::vector<const char *> modes) { this->supported_custom_fan_modes_ = modes; }
+  void set_custom_presets(std::vector<const char *> presets) { this->set_supported_custom_presets(presets); }
+  void set_custom_fan_modes(std::vector<const char *> modes) { this->set_supported_custom_fan_modes(modes); }
 
   uint8_t TXData[TX_LEN];
   uint8_t RXData[RX_LEN];
@@ -255,8 +255,6 @@ class AirConditioner : public PollingComponent, public climate::Climate, public 
   climate::ClimateModeMask supported_modes_{};
   climate::ClimateSwingModeMask supported_swing_modes_{};
   climate::ClimatePresetMask supported_presets_{};
-  std::vector<const char *> supported_custom_presets_{};
-  std::vector<const char *> supported_custom_fan_modes_{};
   bool use_fahrenheit_;
 #ifdef USE_SWITCH
   switch_::Switch *use_fahrenheit_switch_{nullptr};
